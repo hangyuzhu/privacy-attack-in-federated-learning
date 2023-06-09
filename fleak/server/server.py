@@ -111,13 +111,6 @@ class Server:
         # clear uploads buffer
         self.updates = []
 
-    def attack(self, method: str):
-        dummy_data = ...
-        dummy_label = ...
-
-
-
-
     def save_model(self, path):
         # Save server model
         torch.save(self.global_model.state_dict(), path)
