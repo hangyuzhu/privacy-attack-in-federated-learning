@@ -1,7 +1,8 @@
 import copy
+from collections import OrderedDict
 
 from .server import Server
-from collections import OrderedDict
+from fleak.attack.idlg import reconstruct_dlg
 
 
 class ServerDLG(Server):
@@ -19,7 +20,7 @@ class ServerDLG(Server):
                                         momentum=momentum,
                                         device=device)
         self.data_size = data_size
-        self.dummy_data = 
+        self.dummy_data =
         self.dummy_labels =
 
     def comp_grads(self, weights: OrderedDict):
@@ -67,6 +68,7 @@ class ServerDLG(Server):
         self.cur_round += 1
 
     def attack(self, method = "DLG"):
+        reconstruct_dlg(self.updates[0][-1] , dummy_data, dummy_label, self.global_model, 20, 1.0)
 
     def federated_averaging(self):
         total_samples = np.sum([update[1] for update in self.updates])
