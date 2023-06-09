@@ -45,7 +45,7 @@ class Client:
                   optimizer=self.optimizer,
                   criterion=self.criterion)
         self.optimizer.param_groups[0]["lr"] *= self.lr_decay
-        return len(self.train_loader.dataset), self.client_model.state_dict()
+        return self.client_id, len(self.train_loader.dataset), self.client_model.state_dict()
 
     def evaluate(self, set_to_use='test'):
         assert set_to_use in ['train', 'test', 'valid']

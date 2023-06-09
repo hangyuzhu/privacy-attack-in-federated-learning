@@ -48,9 +48,9 @@ class Server:
             eval_correct += eval_cor
             eval_total += eval_tot
             # train and update client model
-            num_samples, update = c.train()
+            c_id, num_samples, update = c.train()
             # update client round
-            self.updates.append((num_samples, update))
+            self.updates.append((c_id, num_samples, update))
         eval_accuracy = eval_correct / eval_total
         print('Round %d: ' % self.cur_round + set_to_use + ' accuracy %.4f' % eval_accuracy)
         # update communication round
@@ -64,9 +64,9 @@ class Server:
         for c in clients:
             c.synchronize(self.cur_round, self.global_model.state_dict())
             # train and update client model
-            num_samples, update = c.train()
+            c_id, num_samples, update = c.train()
             # gather client uploads into a buffer
-            self.updates.append((num_samples, update))
+            self.updates.append((c_id, num_samples, update))
         # update communication round
         self.cur_round += 1
 
@@ -95,21 +95,28 @@ class Server:
                 averaged_soln[key] = self.global_model.state_dict()[key] - self.momentum_buffer[key]
 
     def federated_averaging(self):
-        total_samples = np.sum([update[0] for update in self.updates])
-        averaged_soln = copy.deepcopy(self.updates[0][1])
+        total_samples = np.sum([update[1] for update in self.updates])
+        averaged_soln = copy.deepcopy(self.updates[0][2])
         for key in self.global_model.state_dict().keys():
             if 'num_batches_tracked' in key:
                 continue
             for i in range(len(self.updates)):
                 if i == 0:
-                    averaged_soln[key] = averaged_soln[key] * self.updates[i][0] / total_samples
+                    averaged_soln[key] = averaged_soln[key] * self.updates[i][1] / total_samples
                 else:
-                    averaged_soln[key] += self.updates[i][1][key] * self.updates[i][0] / total_samples
+                    averaged_soln[key] += self.updates[i][2][key] * self.updates[i][1] / total_samples
         self.accumulate_momentum(averaged_soln)
         # update global model
         self.global_model.load_state_dict(averaged_soln)
         # clear uploads buffer
         self.updates = []
+
+    def attack(self, method: str):
+        dummy_data = ...
+        dummy_label = ...
+
+
+
 
     def save_model(self, path):
         # Save server model
