@@ -1,11 +1,16 @@
 import copy
+import torch
+import numpy as np
 from collections import OrderedDict
+import matplotlib.pyplot as plt
 
 from .server import Server
 from fleak.attack.idlg import reconstruct_dlg
 
+device = "cuda" if torch.cuda.is_available() else "CPU"
 
-class ServerDLG(Server):
+
+class Serverdlg(Server):
 
     def __init__(self,
                  server_id=None,
@@ -13,15 +18,17 @@ class ServerDLG(Server):
                  global_model=None,
                  momentum=0.0,
                  data_size=None,
+                 label_size=None,
                  device=None):
-        super(ServerDLG, self).__init__(server_id=server_id,
+        super(Serverdlg, self).__init__(server_id=server_id,
                                         server_group=server_group,
                                         global_model=global_model,
                                         momentum=momentum,
                                         device=device)
         self.data_size = data_size
-        self.dummy_data =
-        self.dummy_labels =
+        self.label_size = label_size
+        self.dummy_data = torch.randn(data_size).to(device).requires_grad_(True)
+        self.dummy_labels = torch.randn(label_size).to(device).requires_grad_(True)
 
     def comp_grads(self, weights: OrderedDict):
         o_weights = self.global_model.state_dict()
@@ -67,8 +74,10 @@ class ServerDLG(Server):
         # update communication round
         self.cur_round += 1
 
-    def attack(self, method = "DLG"):
-        reconstruct_dlg(self.updates[0][-1] , dummy_data, dummy_label, self.global_model, 20, 1.0)
+    def attack(self, method="DLG"):
+        if method == "DLG":
+            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 20, 1.0)
+        return reconstruct_data, reconstruct_label
 
     def federated_averaging(self):
         total_samples = np.sum([update[1] for update in self.updates])
