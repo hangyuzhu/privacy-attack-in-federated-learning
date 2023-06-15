@@ -82,7 +82,7 @@ def main(args):
         label_size = [1, 10]
         num_class = 397
 
-
+    tt = transforms.ToPILImage()
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
 
@@ -118,7 +118,7 @@ def main(args):
             eval_accuracy.append(eval_acc)
         ## dlg attack
         reconstruct_data, reconstruct_label = server.attack(method="DLG")
-        history.append(transforms.ToPILImage(reconstruct_data.cpu()))
+        history.append(tt(reconstruct_data[0].cpu()))
         server.federated_averaging()
         duration_time = time.time() - start_time
         print('One communication round training time: %.4fs' % duration_time)

@@ -8,9 +8,9 @@ device = "cuda" if torch.cuda.is_available() else "CPU"
 criterion = torch.nn.CrossEntropyLoss().to(device)
 
 
-def reconstruct_dlg(shared_gradients, data, label, model, epochs=200, lr=1.0):
-    dummy_data = data
-    dummy_label = label
+def reconstruct_dlg(shared_gradients, dummy_data, dummy_label, model, epochs=200, lr=1.0):
+    # dummy_data = data
+    # dummy_label = label
     optimizer = torch.optim.LBFGS([dummy_data, dummy_label], lr=lr)
     # gradient closure
     for _ in range(epochs):
