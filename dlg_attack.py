@@ -1,9 +1,11 @@
+import copy
 import time
 import json
 import datetime
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -16,6 +18,8 @@ from fleak.data.partition import partition_dataset
 from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
 from fleak.attack.idlg import reconstruct_dlg
 
+dm = torch.as_tensor([0.4914672374725342, 0.4822617471218109, 0.4467701315879822], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]
+ds = torch.as_tensor([0.24703224003314972, 0.24348513782024384, 0.26158785820007324], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]
 def main(args):
     clients_per_round = int(args.total_clients * args.C)
 
@@ -106,6 +110,7 @@ def main(args):
     start = time.time()
     eval_accuracy = []
     history = []
+    plt.figure(figsize=(12, 8))
     for i in range(args.num_rounds):
         # check if the communication round is correct or not
         assert i == server.cur_round
@@ -118,23 +123,34 @@ def main(args):
             eval_accuracy.append(eval_acc)
         ## dlg attack
         reconstruct_data, reconstruct_label = server.attack(method="DLG")
-        history.append(tt(reconstruct_data[0].cpu()))
+        history.append(reconstruct_data.clone().detach())
+
         server.federated_averaging()
         duration_time = time.time() - start_time
         print('One communication round training time: %.4fs' % duration_time)
 
+    ## show reconstructions
+    for i, _recon in enumerate(history):
+        _recon.mul_(ds).add_(dm).clamp_(0, 1)
+        _recon = _recon.to(dtype=torch.float32)
+        plt.subplot(3, 10, i + 1)
+        plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+        plt.title(plt.title("round = %d" % i))
+        plt.axis('off')
 
+    # reconstruct_data = reconstruct_data.detach()
+    # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)
+    # reconstruct_data = reconstruct_data.to(dtype=torch.float32)
+    # plt.subplot(3, 10, i + 1)
+    # plt.imshow(reconstruct_data[0].permute(1, 2, 0).cpu())
+    # plt.title(plt.title("round = %d" % i))
+    # history.append(tt(reconstruct_data[0].cpu()))
+    plt.show()
     # final eval acc
     eval_acc = server.evaluate(set_to_use=args.set_to_use)
     eval_accuracy.append(eval_acc)
 
-    ## reconstruction  result
-    plt.figure(figsize=(12, 8))
-    for i in range(len(history)):
-        plt.subplot(3, 10, i+1)
-        plt.imshow(history[i])
-        plt.title("round = %d" % i)
-        plt.axis('off')
+
 
 def online(clients):
     """We assume all users are always online."""
