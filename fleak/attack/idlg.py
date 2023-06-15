@@ -22,7 +22,7 @@ def reconstruct_dlg(shared_gradients, data, label, model, epochs=200, lr=1.0):
             dummy_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
             grad_diff = 0
-            for dummy_g, origin_g in zip(dummy_dy_dx, shared_gradients):
+            for dummy_g, origin_g in zip(dummy_dy_dx, shared_gradients.values()):
                 grad_diff += ((dummy_g - origin_g) ** 2).sum()
             grad_diff.backward()
             return grad_diff

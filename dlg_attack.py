@@ -167,7 +167,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
-    parser.add_argument('--data_path', default='C:/Users/merlin/data/',
+    parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
     parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
 
