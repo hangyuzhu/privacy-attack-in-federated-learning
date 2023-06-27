@@ -76,7 +76,7 @@ class Serverdlg(Server):
 
     def attack(self, method="DLG"):
         if method == "DLG":
-            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 20, 1.0)
+            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.075)
         return reconstruct_data, reconstruct_label
 
     # def federated_averaging(self):
