@@ -21,7 +21,8 @@ def main(args):
     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
         partition_dataset(dataset=args.dataset,
                           data_dir=data_dir,
-                          data_augment=False,
+#                         data_augment=False,
+                          data_augment=True,
                           iid=args.iid,
                           n_parties=args.total_clients,
                           valid_prop=args.valid_prop,
@@ -127,6 +128,7 @@ def online(clients):
     return clients
 
 
+
 if __name__ == '__main__':
     import argparse
 
@@ -154,7 +156,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
-    parser.add_argument('--data_path', default='../federated_learning/data/',
+    parser.add_argument('--data_path', default='C:/Users/merlin/data/',
                         type=str, help='path of the dataset')
     parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
 

@@ -18,6 +18,7 @@ from fleak.data.partition import partition_dataset
 from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
 from fleak.attack.idlg import reconstruct_dlg
 
+setup = dict(device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)
 dm = torch.as_tensor([0.4914672374725342, 0.4822617471218109, 0.4467701315879822], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]
 ds = torch.as_tensor([0.24703224003314972, 0.24348513782024384, 0.26158785820007324], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]
 def main(args):
@@ -70,6 +71,7 @@ def main(args):
 
     # ======= Datasize ========
     if args.dataset == "cifar10":
+        # shape_img = [1, 3, 32, 32]
         shape_img = [1, 3, 32, 32]
         label_size = [1, 10]
         num_class = 10
@@ -122,7 +124,7 @@ def main(args):
         if i > 0:
             eval_accuracy.append(eval_acc)
         ## dlg attack
-        reconstruct_data, reconstruct_label = server.attack(method="DLG")
+        reconstruct_data, reconstruct_label = server.attack(method="iDLG")
         history.append(reconstruct_data.clone().detach())
 
         server.federated_averaging()
@@ -133,7 +135,7 @@ def main(args):
     for i, _recon in enumerate(history):
         _recon.mul_(ds).add_(dm).clamp_(0, 1)
         _recon = _recon.to(dtype=torch.float32)
-        plt.subplot(3, 10, i + 1)
+        plt.subplot(10, 10, i + 1)
         plt.imshow(_recon[0].permute(1, 2, 0).cpu())
         plt.title(plt.title("round = %d" % i))
         plt.axis('off')
@@ -166,7 +168,7 @@ if __name__ == '__main__':
                         help='strategy used in federated learning')
 
     parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
-    parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
+    parser.add_argument('--total_clients', default=10 , type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
     parser.add_argument('--num_epochs', default=2, type=int, metavar='N',
                         help='number of local client epochs')
