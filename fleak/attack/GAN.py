@@ -114,7 +114,7 @@ def train(dataset,labels,epochs):
             labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
             train_step(image_batch, labels_batch)
 
-        print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start))
+        print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start_time))
 
         # Last epoch generate the images and merge them to the dataset
         generate_and_save(generator, epochs, seed)
