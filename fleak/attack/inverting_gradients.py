@@ -88,8 +88,10 @@ class ConservativeStrategy(Strategy):
         self.dryrun = False
         super().__init__(lr=None, epochs=None, dryrun=False)
 
-defs = ConservativeStrategy(epochs=120, batch_size=128, optimizer='SGD', lr=0.1, scheduler='linear', weight_decay=0.0005, validate=10, warmup=False, dryrun=False, dropout=0.0, augmentations=True)
+# defs = ConservativeStrategy(epochs=120,  optimizer='SGD', lr=0.1, scheduler='linear', weight_decay=0.0005, validate=10, warmup=False, dryrun=False, dropout=0.0, augmentations=True)
+defs = ConservativeStrategy(lr=0.1,epochs=120,dryrun=False)
 defs.epochs = 120
+defs.batch_size = 128
 
 def total_variation(x):
     """Anisotropic TV."""
@@ -274,7 +276,7 @@ class GradientReconstructor():
         self.loss_fn = torch.nn.CrossEntropyLoss(reduction='mean')
         self.iDLG = True
 
-    def reconstruct(self, input_data, labels, img_shape=(3, 32, 32), dryrun=False, eval=True, tol=None):
+    def reconstruct(self, input_data, dummy_data, labels, img_shape=(3, 32, 32), dryrun=False, eval=True, tol=None):
         """Reconstruct image from gradient."""
         start_time = time.time()
         if eval:
@@ -282,13 +284,13 @@ class GradientReconstructor():
 
 
         stats = collections.defaultdict(list)
-        x = self._init_images(img_shape)
         scores = torch.zeros(self.config['restarts'])
 
         if labels is None:
             if self.num_images == 1 and self.iDLG:
                 # iDLG trick:
-                last_weight_min = torch.argmin(torch.sum(input_data[-2], dim=-1), dim=-1)
+                # last_weight_min = torch.argmin(torch.sum(input_data[-2], dim=-1), dim=-1)
+                last_weight_min = torch.argmin(torch.sum(input_data[-1], dim=-1), dim=-1)
                 labels = last_weight_min.detach().reshape((1,)).requires_grad_(False)
                 self.reconstruct_label = False
             else:
@@ -306,10 +308,10 @@ class GradientReconstructor():
 
         try:
             for trial in range(self.config['restarts']):
-                x_trial, labels = self._run_trial(x[trial], input_data, labels, dryrun=dryrun)
+                x_trial, labels = self._run_trial(dummy_data[trial], input_data, labels, dryrun=dryrun)
                 # Finalize
                 scores[trial] = self._score_trial(x_trial, input_data, labels)
-                x[trial] = x_trial
+                dummy_data[trial] = x_trial
                 if tol is not None and scores[trial] <= tol:
                     break
                 if dryrun:
@@ -320,27 +322,27 @@ class GradientReconstructor():
 
         # Choose optimal result:
         if self.config['scoring_choice'] in ['pixelmean', 'pixelmedian']:
-            x_optimal, stats = self._average_trials(x, labels, input_data, stats)
+            x_optimal, stats = self._average_trials(dummy_data, labels, input_data, stats)
         else:
             print('Choosing optimal result ...')
             scores = scores[torch.isfinite(scores)]  # guard against NaN/-Inf scores?
             optimal_index = torch.argmin(scores)
             print(f'Optimal result score: {scores[optimal_index]:2.4f}')
             stats['opt'] = scores[optimal_index].item()
-            x_optimal = x[optimal_index]
+            x_optimal = dummy_data[optimal_index]
 
         print(f'Total time: {time.time()-start_time}.')
         return x_optimal.detach(), stats
 
-    def _init_images(self, img_shape):
-        if self.config['init'] == 'randn':
-            return torch.randn((self.config['restarts'], self.num_images, *img_shape), **self.setup)
-        elif self.config['init'] == 'rand':
-            return (torch.rand((self.config['restarts'], self.num_images, *img_shape), **self.setup) - 0.5) * 2
-        elif self.config['init'] == 'zeros':
-            return torch.zeros((self.config['restarts'], self.num_images, *img_shape), **self.setup)
-        else:
-            raise ValueError()
+    # def _init_images(self, img_shape):
+    #     if self.config['init'] == 'randn':
+    #         return torch.randn((self.config['restarts'], self.num_images, *img_shape), **self.setup)
+    #     elif self.config['init'] == 'rand':
+    #         return (torch.rand((self.config['restarts'], self.num_images, *img_shape), **self.setup) - 0.5) * 2
+    #     elif self.config['init'] == 'zeros':
+    #         return torch.zeros((self.config['restarts'], self.num_images, *img_shape), **self.setup)
+    #     else:
+    #         raise ValueError()
 
     def _run_trial(self, x_trial, input_data, labels, dryrun=False):
         x_trial.requires_grad = True
@@ -621,13 +623,8 @@ def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e
 
 
 
-def inverting_gradients(shared_gradients,global_model,dummy_data, dummy_labels, image_shape,num_image=1):
-    loss_fn = nn.CrossEntropyLoss()
-
-
+def invertinggradients(shared_gradients,global_model, image_shape, dummy_data):
     global_model.zero_grad()
-    full_norm = torch.stack([g.norm for g in shared_gradients]).mean()
-
     config = dict(signed = True,
                   boxed=True,
                   cost_fn='sim',
@@ -643,9 +640,9 @@ def inverting_gradients(shared_gradients,global_model,dummy_data, dummy_labels, 
                   lr_decay=True,
                   scoring_choice='loss')
 
-    rec_machine = FedAvgReconstructor(global_model,(dm,ds),local_steps=0,local_lr=1e-4,config = config,num_images= 1)
-    output, stats = rec_machine.reconstruct(shared_gradients,dummy_labels,imgshape=image_shape,dryrun = False)
-
+    rec_machine = FedAvgReconstructor(model=global_model, mean_std=(dm,ds),local_steps=0, local_lr=1e-4, config=config, num_images=1)
+    output, stats = rec_machine.reconstruct(shared_gradients,labels=None, img_shape=image_shape, dryrun = False, dummy_data = dummy_data)
+    return output, stats
 
 
 

@@ -41,7 +41,7 @@ seed_merge = torch.random.normal([num_to_merge, noise_dim])
 #         x = x.view(-1,32*32)
 #         x = self.main(x)
 #         return x
-
+0
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()

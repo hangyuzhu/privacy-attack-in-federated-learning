@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from .server import Server
 from fleak.attack.idlg import reconstruct_dlg,reconstruct_idlg
+from fleak.attack.inverting_gradients import invertinggradients
 
 device = "cuda" if torch.cuda.is_available() else "CPU"
 
@@ -79,7 +80,10 @@ class Serverdlg(Server):
             reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.075)
         elif method == "iDLG":
             reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.075)
+        elif method == "inverting-gradient":
+            reconstruct_data,reconstruct_label = invertinggradients(self.updates[0][-1], self.global_model, self.data_size, self.dummy_data)
         return reconstruct_data, reconstruct_label
+
 
     # def federated_averaging(self):
     #     total_samples = np.sum([update[1] for update in self.updates])
