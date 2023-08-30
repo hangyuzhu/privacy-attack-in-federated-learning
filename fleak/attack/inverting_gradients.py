@@ -276,7 +276,7 @@ class GradientReconstructor():
         self.loss_fn = torch.nn.CrossEntropyLoss(reduction='mean')
         self.iDLG = True
 
-    def reconstruct(self, input_data, dummy_data, labels, img_shape=(3, 32, 32), dryrun=False, eval=True, tol=None):
+    def reconstruct(self, shared_gradients, dummy_data, labels, dryrun=False, eval=True, tol=None):
         """Reconstruct image from gradient."""
         start_time = time.time()
         if eval:
@@ -290,7 +290,7 @@ class GradientReconstructor():
             if self.num_images == 1 and self.iDLG:
                 # iDLG trick:
                 # last_weight_min = torch.argmin(torch.sum(input_data[-2], dim=-1), dim=-1)
-                last_weight_min = torch.argmin(torch.sum(input_data[-1], dim=-1), dim=-1)
+                last_weight_min = torch.argmin(torch.sum(shared_gradients[-1], dim=-1), dim=-1)
                 labels = last_weight_min.detach().reshape((1,)).requires_grad_(False)
                 self.reconstruct_label = False
             else:
@@ -308,9 +308,9 @@ class GradientReconstructor():
 
         try:
             for trial in range(self.config['restarts']):
-                x_trial, labels = self._run_trial(dummy_data[trial], input_data, labels, dryrun=dryrun)
+                x_trial, labels = self._run_trial(dummy_data[trial], shared_gradients, labels, dryrun=dryrun)
                 # Finalize
-                scores[trial] = self._score_trial(x_trial, input_data, labels)
+                scores[trial] = self._score_trial(x_trial, shared_gradients, labels)
                 dummy_data[trial] = x_trial
                 if tol is not None and scores[trial] <= tol:
                     break
@@ -322,7 +322,7 @@ class GradientReconstructor():
 
         # Choose optimal result:
         if self.config['scoring_choice'] in ['pixelmean', 'pixelmedian']:
-            x_optimal, stats = self._average_trials(dummy_data, labels, input_data, stats)
+            x_optimal, stats = self._average_trials(dummy_data, labels, shared_gradients, stats)
         else:
             print('Choosing optimal result ...')
             scores = scores[torch.isfinite(scores)]  # guard against NaN/-Inf scores?
@@ -334,17 +334,8 @@ class GradientReconstructor():
         print(f'Total time: {time.time()-start_time}.')
         return x_optimal.detach(), stats
 
-    # def _init_images(self, img_shape):
-    #     if self.config['init'] == 'randn':
-    #         return torch.randn((self.config['restarts'], self.num_images, *img_shape), **self.setup)
-    #     elif self.config['init'] == 'rand':
-    #         return (torch.rand((self.config['restarts'], self.num_images, *img_shape), **self.setup) - 0.5) * 2
-    #     elif self.config['init'] == 'zeros':
-    #         return torch.zeros((self.config['restarts'], self.num_images, *img_shape), **self.setup)
-    #     else:
-    #         raise ValueError()
 
-    def _run_trial(self, x_trial, input_data, labels, dryrun=False):
+    def _run_trial(self, x_trial, shared_gradients, labels, dryrun=False):
         x_trial.requires_grad = True
         if self.reconstruct_label:
             output_test = self.model(x_trial)
@@ -377,7 +368,7 @@ class GradientReconstructor():
                                                                          max_iterations // 1.142], gamma=0.1)   # 3/8 5/8 7/8
         try:
             for iteration in range(max_iterations):
-                closure = self._gradient_closure(optimizer, x_trial, input_data, labels)
+                closure = self._gradient_closure(optimizer, x_trial, shared_gradients, labels)
                 rec_loss = optimizer.step(closure)
                 if self.config['lr_decay']:
                     scheduler.step()
@@ -623,7 +614,7 @@ def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e
 
 
 
-def invertinggradients(shared_gradients,global_model, image_shape, dummy_data):
+def invertinggradients(shared_gradients,global_model, dummy_data):
     global_model.zero_grad()
     config = dict(signed = True,
                   boxed=True,
@@ -641,7 +632,7 @@ def invertinggradients(shared_gradients,global_model, image_shape, dummy_data):
                   scoring_choice='loss')
 
     rec_machine = FedAvgReconstructor(model=global_model, mean_std=(dm,ds),local_steps=0, local_lr=1e-4, config=config, num_images=1)
-    output, stats = rec_machine.reconstruct(shared_gradients,labels=None, img_shape=image_shape, dryrun = False, dummy_data = dummy_data)
+    output, stats = rec_machine.reconstruct(shared_gradients,labels=None, dryrun = False, dummy_data = dummy_data)
     return output, stats
 
 

@@ -81,7 +81,7 @@ class Serverdlg(Server):
         elif method == "iDLG":
             reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.075)
         elif method == "inverting-gradient":
-            reconstruct_data,reconstruct_label = invertinggradients(self.updates[0][-1], self.global_model, self.data_size, self.dummy_data)
+            reconstruct_data,reconstruct_label = invertinggradients(self.updates[0][-1], self.global_model, self.dummy_data)
         return reconstruct_data, reconstruct_label
 
 
