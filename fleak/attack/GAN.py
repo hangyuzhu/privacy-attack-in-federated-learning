@@ -27,21 +27,7 @@ num_to_merge = 500
 seed = torch.random.normal([num_examples_to_generate, noise_dim])
 seed_merge = torch.random.normal([num_to_merge, noise_dim])
 
-# class Discriminator(nn.Module):
-#     def __init__(self):
-#         super(Discriminator, self).__init__()
-#         self.main = nn.Sequential(
-#             nn.Linear(28*28, 512),
-#             nn.LeakyReLU(),
-#             nn.Linear(512, 256),
-#             nn.LeakyReLU(256, 1),
-#             nn.Sigmoid()
-#         )
-#     def forward(self,x):
-#         x = x.view(-1,32*32)
-#         x = self.main(x)
-#         return x
-0
+
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
