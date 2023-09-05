@@ -45,8 +45,8 @@ class Generator(nn.Module):
         return x
 
 
-def GAN_attack(discriminator,num_classes):
-    discriminator.add_module("add_LeakyReLU",nn.LeakyReLU(num_classes, 1))
+def GAN_attack(discriminator, num_classes):
+    discriminator.add_module("add_LeakyReLU", nn.LeakyReLU(num_classes, 1))
     generator = Generator().to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
     d_optim = torch.optim.Adam(discriminator.parameters(), lr=0.0001)
@@ -70,15 +70,13 @@ def GAN_attack(discriminator,num_classes):
         # Attack label
         for i in range(len(ideal_result)):
             # The class which attacker intends to get
-            ideal_result[i] = 3
+            ideal_result[i] = 4
 
         return criterion(ideal_result, fake_output)
 
     def train_step(image, label, img_size):
         random_noise = torch.randn(img_size, 100, device=device)
         for epoch in range(20):
-            discriminator_loss = 0
-            gen_loss = 0
             generated_image = generator(noise_dim, traning=True)
             real_output = discriminator(image, training=False)
             fake_output = discriminator(generated_image, training=False)
