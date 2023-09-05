@@ -74,28 +74,25 @@ def GAN_attack(discriminator, num_classes):
 
         return criterion(ideal_result, fake_output)
 
-    def train_step(image, label, img_size):
-        random_noise = torch.randn(img_size, 100, device=device)
-        for epoch in range(20):
-            generated_image = generator(random_noise, traning=True)
-            real_output = discriminator(image, training=False)
-            fake_output = discriminator(generated_image, training=False)
-            gen_loss = generator_loss(fake_output)
-            dis_loss = discriminator_loss(real_output, fake_output, real_label=label)
-
-            dis_loss.backward()
-            d_optim.step()
-
-            gen_loss.backward()
-            g_optim.step()
-
     def train(dataset, labels, epochs, img_size):
         for epoch in range(epochs):
             start_time = time.time()
             for i in range(round(len(dataset) / BATCH_SIZE)):
                 image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
                 labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-                train_step(image_batch, labels_batch,img_size)
+
+                random_noise = torch.randn(img_size, 100, device=device)
+                generated_image = generator(random_noise, traning=True)
+                real_output = discriminator(image_batch, training=False)
+                fake_output = discriminator(generated_image, training=False)
+                gen_loss = generator_loss(fake_output)
+                dis_loss = discriminator_loss(real_output, fake_output, real_label=labels_batch)
+
+                dis_loss.backward()
+                d_optim.step()
+
+                gen_loss.backward()
+                g_optim.step()
 
             print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start_time))
 
