@@ -65,25 +65,28 @@ def generator_loss(fake_output):
 
     return criterion(ideal_result, fake_output)
 
-def train(dataset, labels, epochs, img_size,generator,discriminator):
+def train(dataset, labels, epochs, img_size,generator,discriminator): ## dataset: 真实用户数据，但是不知道怎么写在代码里面
     d_optim = torch.optim.Adam(discriminator.parameters(), lr=0.0001)
     g_optim = torch.optim.Adam(generator.parameters(), lr=0.001)
+
     for epoch in range(epochs):
         start_time = time.time()
         for i in range(round(len(dataset) / BATCH_SIZE)):
             image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
             labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-
             random_noise = torch.randn(img_size, 100, device=device)
+
             generated_image = generator(random_noise, traning=True)
             real_output = discriminator(image_batch, training=False)
             fake_output = discriminator(generated_image, training=False)
             gen_loss = generator_loss(fake_output)
             dis_loss = discriminator_loss(real_output, fake_output, real_label=labels_batch)
 
+            d_optim.zero_grad()
             dis_loss.backward()
             d_optim.step()
 
+            g_optim.zero_grad()
             gen_loss.backward()
             g_optim.step()
 
@@ -108,19 +111,15 @@ def GAN_attack(discriminator, num_classes):
     discriminator.add_module("add_LeakyReLU", nn.LeakyReLU(num_classes, 1))
     generator = Generator().to(device)
 
-
-    # Loss of discriminator
-
-
     ## attack
-    for i in range(20):
-        if Test_accuracy[i - 1] > 0.85:
-            train(Gan_epoch)
-            prediction = generator(seed_merge, training=False)
-            gen_image = np.array(prediction)
-            gen_label = np.array([1] * len(gen_image))
+    if Test_accuracy > 0.85:
+        train(Gan_epoch)
+        prediction = generator(seed_merge, training=False)
+        gen_image = np.array(prediction)
+        gen_label = np.array([1] * len(gen_image))
 
-# discriminator = Discriminator().to(device)
+    return gen_image,gen_label
+
 
 
 
