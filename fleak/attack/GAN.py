@@ -14,7 +14,7 @@ Round = 300
 Clinets_per_round = 10
 Batch_size = 2048
 Gan_epoch = 1
-Test_accuracy = []
+
 Models = {}
 Client_data = {}
 Client_labels = {}
@@ -107,18 +107,18 @@ def generate_and_save(model, epoch, test_input):
 
     plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
 
-def GAN_attack(discriminator, num_classes):
-    discriminator.add_module("add_LeakyReLU", nn.LeakyReLU(num_classes, 1))
+def GAN_attack(discriminator, num_classes,batch,img_size):
+    discriminator.add_module("add_LeakyReLU", nn.LeakyReLU(num_classes, num_classes+1))
     generator = Generator().to(device)
 
     ## attack
-    if Test_accuracy > 0.85:
-        train(Gan_epoch)
+    if batch == 1:
+        train(epochs=Gan_epoch, img_size=img_size)
         prediction = generator(seed_merge, training=False)
         gen_image = np.array(prediction)
         gen_label = np.array([1] * len(gen_image))
 
-    return gen_image,gen_label
+    return gen_image, gen_label
 
 
 
