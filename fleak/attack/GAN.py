@@ -36,7 +36,7 @@ class Generator(nn.Module):
             nn.ReLU(),
             nn.Linear(256, 512),
             nn.ReLU(),
-            nn.Linear(512, 28*28),
+            nn.Linear(512, 32*32),
             nn.Tanh()
         )
     def forward(self, x):
@@ -45,7 +45,7 @@ class Generator(nn.Module):
         return x
 
 def discriminator_loss(real_output, fake_output, real_labels):
-    real_loss = criterion(real_labels, real_output)
+    real_loss = criterion(real_output,real_labels)
 
     fake_result = np.zeros(len(fake_output))
     # Attack label
@@ -63,7 +63,7 @@ def generator_loss(fake_output):
         # The class which attacker intends to get
         ideal_result[i] = 4
 
-    return criterion(ideal_result, fake_output)
+    return criterion(fake_output, ideal_result)
 
 def train(dataset, labels, epochs, img_size,generator,discriminator): ## dataset: 真实用户数据，但是不知道怎么写在代码里面
     d_optim = torch.optim.Adam(discriminator.parameters(), lr=0.0001)
