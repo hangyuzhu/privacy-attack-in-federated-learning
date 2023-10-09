@@ -55,7 +55,7 @@ class Maliciousclient(Client):
         ## 训练完开始进行GAN攻击，令id=0的客户端为恶意客户端
         if self.client_id == 0:
             label_a = torch.randint(0, 9, (len(self.train_loader.dataset), 1))
-            gen_image, gen_label=GAN.GAN_attack(self.client_model, num_classes=10, batch=1, img_size=self.img_size, attack_label=label_a, dataset=self.train_loader.dataset, real_labels=self.train_loader.labels)
+            gen_image, gen_label=GAN.GAN_attack(self.client_model, batch=1, img_size=self.img_size, attack_label=label_a, dataset=self.train_loader.dataset, real_labels=self.train_loader.labels)
         return self.client_id, len(self.train_loader.dataset), self.client_model.state_dict()
 
     def evaluate(self, set_to_use='test'):
