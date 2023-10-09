@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 
 from fleak.server import Server
-from fleak.client import maliciousclient
+from fleak.client import Maliciousclient
 # from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
@@ -65,16 +65,16 @@ def main(args):
 
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
-    if args.dataset == 'mnist' and args.model == 'cnn':
-        model.fc2 = nn.Linear(128, 11)
-    if args.dataset == 'mnist' and args.model == 'mlp':
-        model.fc2 = nn.Linear(200, 11)
+    # if args.dataset == 'mnist' and args.model == 'cnn':
+    #     model.fc2 = nn.Linear(128, 11)
+    # if args.dataset == 'mnist' and args.model == 'mlp':
+    #     model.fc2 = nn.Linear(200, 11)
     # ======= Create Server ========
-    server = Server(global_model=model(n_classes), momentum=args.server_momentum, device=args.device)
+    server = Server(global_model=model(n_classes + 1), momentum=args.server_momentum, device=args.device)
 
     # ======= Create Clients ========
-    all_clients = [maliciousclient.Maliciousclient(client_id=i,
-                          client_model=model(n_classes),
+    all_clients = [Maliciousclient(client_id=i,
+                          client_model=model(n_classes + 1),
                           num_epochs=args.num_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
-    parser.add_argument('--data_path', default='C:/Users/merlin/data/',
+    parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
     parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
 

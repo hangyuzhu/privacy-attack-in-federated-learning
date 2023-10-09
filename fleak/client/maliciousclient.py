@@ -8,7 +8,7 @@ from ..utils.train_eval import train, evaluate
 from .client import Client
 from fleak.attack import GAN
 
-device = "cuda" if torch.cuda.is_available() else "CPU"
+# device = "cuda" if torch.cuda.is_available() else "CPU"
 
 class Maliciousclient(Client):
     def __init__(self,
@@ -24,7 +24,7 @@ class Maliciousclient(Client):
                  valid_loader=None,
                  test_loader=None,
                  device=None):
-        super(Maliciousclient,self).__init__(client_id=client_id,
+        super(Maliciousclient, self).__init__(client_id=client_id,
                                              client_group=client_group,
                                              client_model=client_model,
                                              num_epochs=num_epochs,
@@ -55,7 +55,7 @@ class Maliciousclient(Client):
         ## 训练完开始进行GAN攻击，令id=0的客户端为恶意客户端
         if self.client_id == 0:
             label_a = torch.randint(0, 9, (len(self.train_loader.dataset), 1))
-            gen_image, gen_label=GAN.GAN_attack(self.client_model, batch=64, img_size=self.img_size, attack_label=label_a, dataset=self.train_loader.dataset)
+            gen_image, gen_label=GAN.GAN_attack(self.client_model, batch_size=64, img_size=self.img_size, attack_label=label_a, dataset=self.train_loader.dataset)
         return self.client_id, len(self.train_loader.dataset), self.client_model.state_dict()
 
     def evaluate(self, set_to_use='test'):

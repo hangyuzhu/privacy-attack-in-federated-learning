@@ -1,6 +1,2 @@
 from .client import Client
-
-
-__all__ = {
-    "Client"
-}
+from .maliciousclient import Maliciousclient
