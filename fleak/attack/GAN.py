@@ -174,11 +174,9 @@ def generate_and_save(model, epoch, test_input):
     plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
 
 def GAN_attack(discriminator, num_classes,batch_size,img_size,attack_label,dataset,real_labels):
-    discriminator.add_module("add_LeakyReLU", nn.LeakyReLU(num_classes, num_classes+1))
-    generator = Generator(100 , 3136).to(device)
-    random_noise = torch.randn(img_size, 100, device=device)
-
+    generator = Generator(100,3136).to(device)
     train(datasets=dataset, labels=attack_label, GAN_epoch=Gan_epoch, epochs=100, img_size=img_size, generator=generator,discriminator=discriminator,BATCH_SIZE = batch_size)
+    random_noise = torch.randn(img_size, 100, device=device)
     prediction = generator(random_noise, training=False)
     gen_image = np.array(prediction)
     gen_label = np.array([1] * len(gen_image))

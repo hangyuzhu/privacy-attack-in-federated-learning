@@ -4,6 +4,7 @@ import datetime
 import os
 import numpy as np
 from torch.utils.data import DataLoader
+import torch.nn as nn
 
 from fleak.server import Server
 from fleak.client import maliciousclient
@@ -64,7 +65,10 @@ def main(args):
 
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
-
+    if args.dataset == 'mnist' and args.model == 'cnn':
+        model.fc2 = nn.Linear(128, 11)
+    if args.dataset == 'mnist' and args.model == 'mlp':
+        model.fc2 = nn.Linear(200, 11)
     # ======= Create Server ========
     server = Server(global_model=model(n_classes), momentum=args.server_momentum, device=args.device)
 
@@ -162,7 +166,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data_path', default='C:/Users/merlin/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='MNIST', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')
