@@ -73,7 +73,7 @@ def main(args):
     server = Server(global_model=model(n_classes), momentum=args.server_momentum, device=args.device)
 
     # ======= Create Clients ========
-    all_clients = [maliciousclient(client_id=i,
+    all_clients = [maliciousclient.Maliciousclient(client_id=i,
                           client_model=model(n_classes),
                           num_epochs=args.num_epochs,
                           lr=args.lr,
