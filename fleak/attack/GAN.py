@@ -20,52 +20,63 @@ Client_data = {}
 Client_labels = {}
 
 BATCH_SIZE = 256
-noise_dim = 100
-num_examples_to_generate = 36
-num_to_merge = 500
-# num_to_merge = 50
-seed = torch.random.normal([num_examples_to_generate, noise_dim])
-seed_merge = torch.random.normal([num_to_merge, noise_dim])
+
 criterion = torch.nn.CrossEntropyLoss().to(device)
 
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, input_size,num_feature):
         super(Generator, self).__init__()
-        self.main = nn.Sequential(
-            nn.Linear(100, 256),
-            nn.ReLU(),
-            nn.Linear(256, 512),
-            nn.ReLU(),
-            nn.Linear(512, 32*32),
-            nn.Tanh()
+        self.fc = nn.Linear(input_size,num_feature)
+        self.br = nn.Sequential(
+            nn.BatchNorm2d(1),
+            nn.ReLU()
         )
-    def forward(self, x):
-        x = self.main(x)
-        x = x.view(-1, 32 * 32)
-        return x
+        self.main = nn.Sequential(
+            nn.Conv2d(1, 50, 3, stride=1, padding=1),
+            nn.BatchNorm2d(50),
+            nn.ReLU(),
+            nn.Conv2d(25, 1, 2, stride=2),
+            nn.Tanh()
+            # nn.Linear(100, 256),
+            # nn.ReLU(),
+            # nn.Linear(256, 512),
+            # nn.ReLU(),
+            # nn.Linear(512, img_size*img_size),
+            # nn.Tanh()
+        )
+        def forward(self,x):
+            x = self.fc(x)
+            x = x.view(x.size(0), 1, 56, 56)
+            x = self.br(x)
+            x = self.main(x)
+            return x
+    # def forward(self, x):
+    #     x = self.main(x)
+    #     x = x.view(-1, 56 * 56)
+    #     return x
 
-def discriminator_loss(real_output, fake_output, real_labels):
-    real_loss = criterion(real_output,real_labels)
+# def discriminator_loss(real_output, fake_output, real_labels):
+#     real_loss = criterion(real_output,real_labels)
+#
+#     fake_result = np.zeros(len(fake_output))
+#     # Attack label
+#     for i in range(len(fake_result)):
+#         fake_result[i] = 10
+#     fake_loss = criterion(fake_result, fake_output)
+#     total_loss = real_loss + fake_loss
+#     return total_loss
+#
+#     # Loss of generator
+# def generator_loss(fake_output):
+#     ideal_result = np.zeros(len(fake_output))
+#     # Attack label
+#     for i in range(len(ideal_result)):
+#         # The class which attacker intends to get
+#         ideal_result[i] = 4
+#
+#     return criterion(fake_output, ideal_result)
 
-    fake_result = np.zeros(len(fake_output))
-    # Attack label
-    for i in range(len(fake_result)):
-        fake_result[i] = 10
-    fake_loss = criterion(fake_result, fake_output)
-    total_loss = real_loss + fake_loss
-    return total_loss
-
-    # Loss of generator
-def generator_loss(fake_output):
-    ideal_result = np.zeros(len(fake_output))
-    # Attack label
-    for i in range(len(ideal_result)):
-        # The class which attacker intends to get
-        ideal_result[i] = 4
-
-    return criterion(fake_output, ideal_result)
-
-def train(dataset, labels, epochs, img_size,generator,discriminator): ## dataset: 真实用户数据，但是不知道怎么写在代码里面
+def train(dataset, labels, epochs, img_size,generator,discriminator): ## dataset: 真实用户数据
     d_optim = torch.optim.Adam(discriminator.parameters(), lr=0.0001)
     g_optim = torch.optim.Adam(generator.parameters(), lr=0.001)
 
@@ -74,31 +85,103 @@ def train(dataset, labels, epochs, img_size,generator,discriminator): ## dataset
         for i in range(round(len(dataset) / BATCH_SIZE)):
             image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
             labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-            random_noise = torch.randn(img_size, 100, device=device)
 
-            generated_image = generator(random_noise, traning=True)
+            ## training D
+            discriminator.zero_grad()
             real_output = discriminator(image_batch, training=False)
-            fake_output = discriminator(generated_image, training=False)
-            gen_loss = generator_loss(fake_output)
-            dis_loss = discriminator_loss(real_output, fake_output, real_label=labels_batch)
+            dis_loss1 = criterion(real_output, labels_batch)
+            dis_loss1.backward()
 
-            d_optim.zero_grad()
-            dis_loss.backward()
+            random_noise = torch.randn(img_size, 100, device=device)
+            fake_image = generator(random_noise)
+            fake_output = discriminator(fake_image,training=False)
+            dis_loss2 = criterion(fake_output, labels_batch)
+            dis_loss2.backward()
+            dis_loss = dis_loss1+dis_loss2
             d_optim.step()
 
-            g_optim.zero_grad()
+            ## training G
+            generator.zero_grad()
+            fake_output = discriminator(fake_image).view(-1)
+            gen_loss = criterion(fake_output, labels_batch)
             gen_loss.backward()
             g_optim.step()
+            # real_output = discriminator(image_batch, training=False)
+            # random_noise = torch.randn(img_size, 100, device=device)
+            # generated_image = generator(random_noise, traning=True)
+            #
+            # fake_output = discriminator(generated_image, training=False)
+            # gen_loss = generator_loss(fake_output)
+            # dis_loss = discriminator_loss(real_output, fake_output, real_label=labels_batch)
+            #
+            # d_optim.zero_grad()
+            # dis_loss.backward()
+            # d_optim.step()
+            #
+            # g_optim.zero_grad()
+            # gen_loss.backward()
+            # g_optim.step()
 
         print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start_time))
 
         # Last epoch generate the images and merge them to the dataset
-        generate_and_save(generator, epochs, seed)
+        generate_and_save(generator, epochs, random_noise)
 
+
+# def train_server(discriminator_loss1, epochs, img_size, generator, discriminator, labels):
+#     d_optim = torch.optim.Adam(discriminator.parameters(), lr=0.0001)
+#     g_optim = torch.optim.Adam(generator.parameters(), lr=0.001)
+#
+#     for epoch in range(epochs):
+#         start_time = time.time()
+#         for i in range(round(len(labels) / BATCH_SIZE)):
+#             labels_batch = labels[i * BATCH_SIZE:min(len(labels), (i + 1) * BATCH_SIZE)]
+#
+#             ## training D
+#             discriminator.zero_grad()
+#             # real_output = discriminator(image_batch, training=False)
+#             # dis_loss1 = criterion(real_output, labels)
+#             discriminator_loss1.backward()
+#
+#             random_noise = torch.randn(img_size, 100, device=device)
+#             fake_image = generator(random_noise)
+#             fake_output = discriminator(fake_image, training=False)
+#             dis_loss2 = criterion(fake_output, labels_batch)
+#             dis_loss2.backward()
+#             dis_loss = discriminator_loss1+dis_loss2
+#             d_optim.step()
+#
+#             ## training G
+#             generator.zero_grad()
+#             fake_output = discriminator(fake_image).view(-1)
+#             gen_loss = criterion(fake_output, labels_batch)
+#             gen_loss.backward()
+#             g_optim.step()
+#             # real_output = discriminator(image_batch, training=False)
+#             # random_noise = torch.randn(img_size, 100, device=device)
+#             # generated_image = generator(random_noise, traning=True)
+#             #
+#             # fake_output = discriminator(generated_image, training=False)
+#             # gen_loss = generator_loss(fake_output)
+#             # dis_loss = discriminator_loss(real_output, fake_output, real_label=labels_batch)
+#             #
+#             # d_optim.zero_grad()
+#             # dis_loss.backward()
+#             # d_optim.step()
+#             #
+#             # g_optim.zero_grad()
+#             # gen_loss.backward()
+#             # g_optim.step()
+#
+#         print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start_time))
+#
+#         # Last epoch generate the images and merge them to the dataset
+#         generate_and_save(generator, epochs, seed)
 def generate_and_save(model, epoch, test_input):
     predictions = model(test_input, training=False)
 
-    fig = plt.figure(figsize=(6, 6))
+    fig = plt.figure(figsize
+                     =(6, 6))
 
     for i in range(predictions.shape[0]):
         plt.subplot(6, 6, i + 1)
@@ -107,18 +190,20 @@ def generate_and_save(model, epoch, test_input):
 
     plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
 
-def GAN_attack(discriminator, num_classes,batch,img_size):
+def GAN_attack(discriminator, num_classes,batch,img_size,attack_label,dataset):
     discriminator.add_module("add_LeakyReLU", nn.LeakyReLU(num_classes, num_classes+1))
-    generator = Generator().to(device)
+    generator = Generator(100,3136).to(device)
+    random_noise = torch.randn(img_size, 100, device=device)
 
-    ## attack
-    if batch == 1:
-        train(epochs=Gan_epoch, img_size=img_size)
-        prediction = generator(seed_merge, training=False)
-        gen_image = np.array(prediction)
-        gen_label = np.array([1] * len(gen_image))
+    train(datasets=dataset, labels=attack_label, epochs=Gan_epoch, img_size=img_size, generator=generator,discriminator=discriminator)
+    prediction = generator(random_noise, training=False)
+    gen_image = np.array(prediction)
+    gen_label = np.array([1] * len(gen_image))
 
     return gen_image, gen_label
+
+
+
 
 
 
