@@ -26,7 +26,7 @@ criterion = torch.nn.CrossEntropyLoss().to(device)
 class Generator(nn.Module):
     def __init__(self, input_size,num_feature):
         super(Generator, self).__init__()
-        self.fc = nn.Linear(input_size,num_feature)
+        self.fc = nn.Linear(input_size, num_feature)
         self.br = nn.Sequential(
             nn.BatchNorm2d(1),
             nn.ReLU()
@@ -35,21 +35,18 @@ class Generator(nn.Module):
             nn.Conv2d(1, 50, 3, stride=1, padding=1),
             nn.BatchNorm2d(50),
             nn.ReLU(),
+            nn.Conv2d(50, 25, 3, stride=1, padding=1),
+            nn.BatchNorm2d(25),
+            nn.ReLU(),
             nn.Conv2d(25, 1, 2, stride=2),
             nn.Tanh()
-            # nn.Linear(100, 256),
-            # nn.ReLU(),
-            # nn.Linear(256, 512),
-            # nn.ReLU(),
-            # nn.Linear(512, img_size*img_size),
-            # nn.Tanh()
         )
-        def forward(self,x):
-            x = self.fc(x)
-            x = x.view(x.size(0), 1, 56, 56)
-            x = self.br(x)
-            x = self.main(x)
-            return x
+    def forward(self,x):
+        x = self.fc(x)
+        x = x.view(x.size(0), 1, 56, 56)
+        x = self.br(x)
+        x = self.main(x)
+        return x
     # def forward(self, x):
     #     x = self.main(x)
     #     x = x.view(-1, 56 * 56)
@@ -76,51 +73,37 @@ class Generator(nn.Module):
 #
 #     return criterion(fake_output, ideal_result)
 
-def train(dataset, labels, epochs, img_size,generator,discriminator): ## dataset: 真实用户数据
+def train(dataset, labels, GAN_epoch, epochs,img_size,generator,discriminator, BATCH_SIZE): ## dataset: 真实用户数据
     d_optim = torch.optim.Adam(discriminator.parameters(), lr=0.0001)
     g_optim = torch.optim.Adam(generator.parameters(), lr=0.001)
 
-    for epoch in range(epochs):
+    for epoch in range(GAN_epoch):
         start_time = time.time()
         for i in range(round(len(dataset) / BATCH_SIZE)):
             image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
             labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-
-            ## training D
-            discriminator.zero_grad()
-            real_output = discriminator(image_batch, training=False)
-            dis_loss1 = criterion(real_output, labels_batch)
-            dis_loss1.backward()
-
             random_noise = torch.randn(img_size, 100, device=device)
-            fake_image = generator(random_noise)
-            fake_output = discriminator(fake_image,training=False)
-            dis_loss2 = criterion(fake_output, labels_batch)
-            dis_loss2.backward()
-            dis_loss = dis_loss1+dis_loss2
-            d_optim.step()
 
-            ## training G
-            generator.zero_grad()
-            fake_output = discriminator(fake_image).view(-1)
-            gen_loss = criterion(fake_output, labels_batch)
-            gen_loss.backward()
-            g_optim.step()
-            # real_output = discriminator(image_batch, training=False)
-            # random_noise = torch.randn(img_size, 100, device=device)
-            # generated_image = generator(random_noise, traning=True)
-            #
-            # fake_output = discriminator(generated_image, training=False)
-            # gen_loss = generator_loss(fake_output)
-            # dis_loss = discriminator_loss(real_output, fake_output, real_label=labels_batch)
-            #
-            # d_optim.zero_grad()
-            # dis_loss.backward()
-            # d_optim.step()
-            #
-            # g_optim.zero_grad()
-            # gen_loss.backward()
-            # g_optim.step()
+            for j in range(epochs):
+                ## training D
+                real_output = discriminator(image_batch, training=False)
+                dis_loss1 = criterion(real_output, labels_batch)
+                fake_image = generator(random_noise)
+                fake_output = discriminator(fake_image,training=False)
+                dis_loss2 = criterion(fake_output, labels_batch)
+
+                dis_loss = dis_loss1+dis_loss2
+                discriminator.zero_grad()
+                dis_loss.backward()
+                d_optim.step()
+
+                ## training G
+                fake_output = discriminator(fake_image).view(-1)
+                gen_loss = criterion(fake_output, labels_batch)
+
+                generator.zero_grad()
+                gen_loss.backward()
+                g_optim.step()
 
         print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start_time))
 
@@ -190,12 +173,12 @@ def generate_and_save(model, epoch, test_input):
 
     plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
 
-def GAN_attack(discriminator, num_classes,batch,img_size,attack_label,dataset):
+def GAN_attack(discriminator, num_classes,batch_size,img_size,attack_label,dataset,real_labels):
     discriminator.add_module("add_LeakyReLU", nn.LeakyReLU(num_classes, num_classes+1))
-    generator = Generator(100,3136).to(device)
+    generator = Generator(100 , 3136).to(device)
     random_noise = torch.randn(img_size, 100, device=device)
 
-    train(datasets=dataset, labels=attack_label, epochs=Gan_epoch, img_size=img_size, generator=generator,discriminator=discriminator)
+    train(datasets=dataset, labels=attack_label, GAN_epoch=Gan_epoch, epochs=100, img_size=img_size, generator=generator,discriminator=discriminator,BATCH_SIZE = batch_size)
     prediction = generator(random_noise, training=False)
     gen_image = np.array(prediction)
     gen_label = np.array([1] * len(gen_image))
