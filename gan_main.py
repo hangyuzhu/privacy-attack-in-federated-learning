@@ -66,7 +66,7 @@ for epoch in range(EPOCHS):
         # Generate a batch of images
         fake_features = generator(noise)
         # Generate the tracked labels
-        tracked_labels = torch.full(labels.shape, 3, device=device)
+        tracked_labels = torch.full(labels.shape, 8, device=device)
 
         # Loss measures generator's ability to fool the discriminator
         g_loss = criterion(discriminator(fake_features), tracked_labels)
