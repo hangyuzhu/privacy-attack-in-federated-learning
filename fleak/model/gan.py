@@ -22,23 +22,28 @@ class MnistGenerator(nn.Module):
         #     nn.Conv2d(64, opt.channels, 3, stride=1, padding=1),
         #     nn.Tanh(),
         # )
-        self.linear1 = nn.Sequential(
-            nn.Linear(100, 7 * 7 * 256),
-            nn.BatchNorm1d(7 * 7 * 256),
-            nn.LeakyReLU()
-        )
+        # self.linear1 = nn.Sequential(
+        #     nn.Linear(100, 7 * 7 * 256),
+        #     nn.BatchNorm1d(7 * 7 * 256),
+        #     nn.ReLU()
+        # )
         self.conv1 = nn.Sequential(
-            # B 256 7 7
-            nn.ConvTranspose2d(256, 128, 5, 1, 2, bias=False),  # 128 7 7
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU()
+            nn.ConvTranspose2d(100, 256, 4, 1, 0, bias=False),  # 256 4 4
+            nn.BatchNorm2d(256),
+            nn.ReLU()
         )
         self.conv2 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),  # 64 14 14
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU()
+            # B 256 7 7
+            nn.ConvTranspose2d(256, 128, 5, 2, 2, bias=False),  # 128 7 7
+            nn.BatchNorm2d(128),
+            nn.ReLU()
         )
         self.conv3 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),  # 64 14 14
+            nn.BatchNorm2d(64),
+            nn.ReLU()
+        )
+        self.conv4 = nn.Sequential(
             nn.ConvTranspose2d(64, 1, 4, 2, 1, bias=False),  # 1 28 28
             nn.Tanh()
         )
@@ -47,11 +52,12 @@ class MnistGenerator(nn.Module):
         # out = self.l1(z)
         # out = out.view(out.shape[0], 128, self.init_size, self.init_size)
         # img = self.conv_blocks(out)
-        x = self.linear1(x)
-        x = x.view(-1, 256, 7, 7)
+        # x = self.linear1(x)
+        # x = x.view(-1, 256, 7, 7)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
+        x = self.conv4(x)
         return x
 
 

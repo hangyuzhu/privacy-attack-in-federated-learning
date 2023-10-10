@@ -37,7 +37,7 @@ train_dataset = datasets.MNIST('../federated_learning/data/mnist', train=True, d
 test_dataset = datasets.MNIST('../federated_learning/data/mnist', train=False, transform=transform)
 
 # fixed noise
-fixed_noise = torch.randn(9, noise_dim, device=device)
+fixed_noise = torch.randn(9, noise_dim, 1, 1, device=device)
 
 # Sample to warm up
 warmup_dataloader = DataLoader(DatasetSplit(train_dataset, range(3000)), batch_size=BATCH_SIZE, shuffle=True)
@@ -57,9 +57,9 @@ test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 test_correct = evaluate(discriminator, device, test_loader)
 print('\ntest accuracy: ', test_correct / len(test_dataset))
 
-attack_dataloader = DataLoader(DatasetSplit(train_dataset, torch.where(train_dataset.targets == 0)[0]),
-                               batch_size=BATCH_SIZE, shuffle=True)
-# attack_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+# attack_dataloader = DataLoader(DatasetSplit(train_dataset, torch.where(train_dataset.targets == 0)[0]),
+#                                batch_size=BATCH_SIZE, shuffle=True)
+attack_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 # optimizer
 optimizer_G = optim.Adam(generator.parameters(), lr=1e-4)
@@ -77,7 +77,7 @@ for epoch in range(EPOCHS):
         optimizer_G.zero_grad()
 
         # Sample noise as generator input
-        noise = torch.randn(len(labels), noise_dim, device=device)
+        noise = torch.randn(len(labels), noise_dim, 1, 1, device=device)
         # Generate a batch of images
         fake_features = generator(noise)
         # Generate the tracked labels
