@@ -1,91 +1,185 @@
+import argparse
+import os
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import datasets, transforms
+import math
+
+import torchvision.transforms as transforms
+from torchvision.utils import save_image
+
 from torch.utils.data import DataLoader
+from torchvision import datasets
+from torch.autograd import Variable
+
+import torch.nn as nn
+import torch.nn.functional as F
+import torch
 import matplotlib.pyplot as plt
 
-from fleak.data.image_dataset import DatasetSplit
-from fleak.model.gan import MnistGenerator, MnistDiscriminator
-from fleak.utils.train_eval import train, evaluate
+os.makedirs("images", exist_ok=True)
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+parser = argparse.ArgumentParser()
+parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
+parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
+parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
+parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
+parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
+parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
+parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
+# parser.add_argument("--img_size", type=int, default=32, help="size of each image dimension")
+parser.add_argument("--img_size", type=int, default=28, help="size of each image dimension")
+parser.add_argument("--channels", type=int, default=1, help="number of image channels")
+parser.add_argument("--sample_interval", type=int, default=400, help="interval between image sampling")
+opt = parser.parse_args()
+print(opt)
 
-# Constants
-BUFFER_SIZE = 60000
-BATCH_SIZE = 256
-EPOCHS = 150
-noise_dim = 100
+cuda = True if torch.cuda.is_available() else False
 
-# Data
-transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))])
-train_dataset = datasets.MNIST('../federated_learning/data/mnist', train=True, download=True, transform=transform)
-test_dataset = datasets.MNIST('../federated_learning/data/mnist', train=False, transform=transform)
 
-# fixed noise
-fixed_noise = torch.randn(9, noise_dim, device=device)
+def weights_init_normal(m):
+    classname = m.__class__.__name__
+    if classname.find("Conv") != -1:
+        torch.nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find("BatchNorm2d") != -1:
+        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
+        torch.nn.init.constant_(m.bias.data, 0.0)
 
-# Sample to warm up
-warmup_dataloader = DataLoader(DatasetSplit(train_dataset, range(3000)), batch_size=BATCH_SIZE, shuffle=True)
 
-generator = MnistGenerator().to(device)
-discriminator = MnistDiscriminator().to(device)
+class Generator(nn.Module):
+    def __init__(self):
+        super(Generator, self).__init__()
 
-warmup_optimizer = optim.Adam(discriminator.parameters())
-criterion = nn.CrossEntropyLoss()
+        self.init_size = opt.img_size // 4
+        self.l1 = nn.Sequential(nn.Linear(opt.latent_dim, 128 * self.init_size ** 2))
 
-for _ in range(20):
-    train(discriminator, device, warmup_dataloader, warmup_optimizer, criterion)
+        self.conv_blocks = nn.Sequential(
+            nn.BatchNorm2d(128),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            nn.BatchNorm2d(128, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(128, 64, 3, stride=1, padding=1),
+            nn.BatchNorm2d(64, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, opt.channels, 3, stride=1, padding=1),
+            nn.Tanh(),
+        )
 
-test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
-test_correct = evaluate(discriminator, device, test_loader)
-print('\ntest accuracy: ', test_correct / len(test_dataset))
+    def forward(self, z):
+        out = self.l1(z)
+        out = out.view(out.shape[0], 128, self.init_size, self.init_size)
+        img = self.conv_blocks(out)
+        return img
 
-attack_dataloader = DataLoader(DatasetSplit(train_dataset, torch.where(train_dataset.targets == 0)[0]),
-                               batch_size=BATCH_SIZE, shuffle=True)
-# optimizer
-optimizer_G = optim.Adam(generator.parameters(), lr=1e-4)
-optimizer_D = optim.Adam(discriminator.parameters(), lr=1e-4)
 
-for epoch in range(EPOCHS):
-    for i, (features, labels) in enumerate(attack_dataloader):
-        features, labels = features.to(device), labels.to(device)
+class Discriminator(nn.Module):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+
+        def discriminator_block(in_filters, out_filters, bn=True):
+            block = [nn.Conv2d(in_filters, out_filters, 3, 2, 1), nn.LeakyReLU(0.2, inplace=True), nn.Dropout2d(0.25)]
+            if bn:
+                block.append(nn.BatchNorm2d(out_filters, 0.8))
+            return block
+
+        self.model = nn.Sequential(
+            *discriminator_block(opt.channels, 16, bn=False),
+            *discriminator_block(16, 32),
+            *discriminator_block(32, 64),
+            *discriminator_block(64, 128),
+        )
+
+        # The height and width of downsampled image
+        # ds_size = opt.img_size // 2 ** 4
+        # self.adv_layer = nn.Sequential(nn.Linear(128 * ds_size ** 2, 1), nn.Sigmoid())
+        self.adv_layer = nn.Sequential(nn.Linear(512, 1), nn.Sigmoid())
+
+    def forward(self, img):
+        out = self.model(img)
+        out = out.view(out.shape[0], -1)
+        validity = self.adv_layer(out)
+
+        return validity
+
+
+# Loss function
+adversarial_loss = torch.nn.BCELoss()
+
+# Initialize generator and discriminator
+generator = Generator()
+discriminator = Discriminator()
+
+if cuda:
+    generator.cuda()
+    discriminator.cuda()
+    adversarial_loss.cuda()
+
+# Initialize weights
+generator.apply(weights_init_normal)
+discriminator.apply(weights_init_normal)
+
+# Configure data loader
+dataloader = torch.utils.data.DataLoader(
+    datasets.MNIST(
+        '../federated_learning/data/mnist',
+        train=True,
+        download=True,
+        transform=transforms.Compose(
+            # [transforms.Resize(opt.img_size), transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]
+            [transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]
+        ),
+    ),
+    batch_size=opt.batch_size,
+    shuffle=True,
+)
+
+# Optimizers
+optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
+optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
+
+Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+
+# ----------
+#  Training
+# ----------
+
+for epoch in range(opt.n_epochs):
+    for i, (imgs, _) in enumerate(dataloader):
+
+        # Adversarial ground truths
+        valid = Variable(Tensor(imgs.shape[0], 1).fill_(1.0), requires_grad=False)
+        fake = Variable(Tensor(imgs.shape[0], 1).fill_(0.0), requires_grad=False)
+
+        # Configure input
+        real_imgs = Variable(imgs.type(Tensor))
 
         # -----------------
         #  Train Generator
         # -----------------
-        generator.train()
-        discriminator.eval()
+
         optimizer_G.zero_grad()
 
         # Sample noise as generator input
-        noise = torch.randn(len(labels), noise_dim, device=device)
+        z = Variable(Tensor(np.random.normal(0, 1, (imgs.shape[0], opt.latent_dim))))
+
         # Generate a batch of images
-        fake_features = generator(noise)
-        # Generate the tracked labels
-        tracked_labels = torch.full(labels.shape, 8, device=device)
+        gen_imgs = generator(z)
 
         # Loss measures generator's ability to fool the discriminator
-        g_loss = criterion(discriminator(fake_features), tracked_labels)
+        g_loss = adversarial_loss(discriminator(gen_imgs), valid)
+
         g_loss.backward()
         optimizer_G.step()
 
         # ---------------------
         #  Train Discriminator
         # ---------------------
-        generator.eval()
-        discriminator.train()
+
         optimizer_D.zero_grad()
 
-        # Generate fake labels
-        fake_labels = torch.full(labels.shape, 10, device=device)
-
         # Measure discriminator's ability to classify real from generated samples
-        real_loss = criterion(discriminator(features), labels)
-        fake_loss = criterion(discriminator(fake_features.detach()), fake_labels)
+        real_loss = adversarial_loss(discriminator(real_imgs), valid)
+        fake_loss = adversarial_loss(discriminator(gen_imgs.detach()), fake)
         d_loss = (real_loss + fake_loss) / 2
 
         d_loss.backward()
@@ -93,17 +187,14 @@ for epoch in range(EPOCHS):
 
         print(
             "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
-            % (epoch, EPOCHS, i, len(attack_dataloader), d_loss.item(), g_loss.item())
+            % (epoch, opt.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item())
         )
 
-        # Generate fake images
-        batches_done = epoch * len(attack_dataloader) + i
-        if batches_done % 400 == 0:
-            generator.eval()
-            with torch.no_grad():
-                predictions = generator(fixed_noise).detach().cpu()
-            for i in range(predictions.shape[0]):
+        batches_done = epoch * len(dataloader) + i
+        if batches_done % opt.sample_interval == 0:
+            for i in range(9):
                 plt.subplot(3, 3, i + 1)
-                plt.imshow(np.transpose(predictions[i], (1, 2, 0)), cmap='gray')
+                ndarr = gen_imgs[i].mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
+                plt.imshow(ndarr, cmap='gray')
                 plt.axis('off')
             plt.show()
