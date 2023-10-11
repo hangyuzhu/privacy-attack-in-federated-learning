@@ -60,6 +60,8 @@ class GanClient(Client):
             gen_image, gen_label=GAN.GAN_attack(self.client_model, batch_size=64, img_size=self.img_size, attack_label=label_a, dataset=self.train_loader.dataset)
         return self.client_id, len(self.train_loader.dataset), self.client_model.state_dict()
 
+    def adversarial(self, ):
+
     def evaluate(self, set_to_use='test'):
         assert set_to_use in ['train', 'test', 'valid']
         # return test accuracy of this client
