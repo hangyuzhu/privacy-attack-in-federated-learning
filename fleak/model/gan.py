@@ -1,60 +1,34 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class MnistGenerator(nn.Module):
     def __init__(self):
         super(MnistGenerator, self).__init__()
-
-        # self.init_size = opt.img_size // 4
-        # self.l1 = nn.Sequential(nn.Linear(opt.latent_dim, 128 * self.init_size ** 2))
-
-        # self.conv_blocks = nn.Sequential(
-        #     nn.BatchNorm2d(128),
-        #     nn.Upsample(scale_factor=2),
-        #     nn.Conv2d(128, 128, 3, stride=1, padding=1),
-        #     nn.BatchNorm2d(128, 0.8),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     nn.Upsample(scale_factor=2),
-        #     nn.Conv2d(128, 64, 3, stride=1, padding=1),
-        #     nn.BatchNorm2d(64, 0.8),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     nn.Conv2d(64, opt.channels, 3, stride=1, padding=1),
-        #     nn.Tanh(),
-        # )
-        # self.linear1 = nn.Sequential(
-        #     nn.Linear(100, 7 * 7 * 256),
-        #     nn.BatchNorm1d(7 * 7 * 256),
-        #     nn.ReLU()
-        # )
-        self.conv1 = nn.Sequential(
-            nn.ConvTranspose2d(100, 256, 4, 1, 0, bias=False),  # 256 4 4
-            nn.BatchNorm2d(256),
-            nn.ReLU()
+        self.linear = nn.Sequential(
+            nn.Linear(100, 7 * 7 * 256),   # 256x7x7
+            nn.BatchNorm1d(7 * 7 * 256),
+            nn.LeakyReLU()
         )
         self.conv2 = nn.Sequential(
-            # B 256 7 7
-            nn.ConvTranspose2d(256, 128, 5, 2, 2, bias=False),  # 128 7 7
+            nn.ConvTranspose2d(256, 128, 5, 1, 2, bias=False),  # 128x7x7
             nn.BatchNorm2d(128),
-            nn.ReLU()
+            nn.LeakyReLU(),
         )
         self.conv3 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),  # 64 14 14
+            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),  # 64x14x14
             nn.BatchNorm2d(64),
-            nn.ReLU()
+            nn.LeakyReLU()
         )
         self.conv4 = nn.Sequential(
-            nn.ConvTranspose2d(64, 1, 4, 2, 1, bias=False),  # 1 28 28
+            nn.ConvTranspose2d(64, 1, 4, 2, 1, bias=False),  # 1x28x28
             nn.Tanh()
         )
 
     def forward(self, x):
-        # out = self.l1(z)
-        # out = out.view(out.shape[0], 128, self.init_size, self.init_size)
-        # img = self.conv_blocks(out)
-        # x = self.linear1(x)
-        # x = x.view(-1, 256, 7, 7)
-        x = self.conv1(x)
+        x = self.linear(x)
+        x = x.view(-1, 256, 7, 7)
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
@@ -64,55 +38,83 @@ class MnistGenerator(nn.Module):
 class MnistDiscriminator(nn.Module):
     def __init__(self):
         super(MnistDiscriminator, self).__init__()
-
-        # def discriminator_block(in_filters, out_filters, bn=True):
-        #     block = [nn.Conv2d(in_filters, out_filters, 3, 2, 1), nn.LeakyReLU(0.2, inplace=True), nn.Dropout2d(0.25)]
-        #     if bn:
-        #         block.append(nn.BatchNorm2d(out_filters, 0.8))
-        #     return block
-        #
-        # self.model = nn.Sequential(
-        #     *discriminator_block(opt.channels, 16, bn=False),
-        #     *discriminator_block(16, 32),
-        #     *discriminator_block(32, 64),
-        #     *discriminator_block(64, 128),
-        # )
-        #
-        # # The height and width of downsampled image
-        # ds_size = opt.img_size // 2 ** 4
-        # self.adv_layer = nn.Sequential(nn.Linear(128 * ds_size ** 2, 1), nn.Sigmoid())
         self.conv1 = nn.Sequential(
-            nn.Conv2d(1, 64, 3, 2, 1),   # 64 14 14
+            nn.Conv2d(1, 64, 4, 2, 1, bias=False),   # 64x14x14
             nn.LeakyReLU(),
             nn.Dropout2d(0.3)
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, 2, 1),  # 128 7 7
+            nn.Conv2d(64, 128, 4, 2, 1, bias=False),  # 128x7x7
             nn.LeakyReLU(),
             nn.Dropout2d(0.3)
         )
-
-        self.linear = nn.Linear(128 * 7 * 7, 11)
+        self.fc = nn.Linear(128 * 7 * 7, 11)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
         x = x.view(-1, 128 * 7 * 7)
-        x = self.linear(x)
+        x = self.fc(x)
         return x
 
-    # def forward(self, img):
-    #     out = self.model(img)
-    #     out = out.view(out.shape[0], -1)
-    #     validity = self.adv_layer(out)
-    #
-    #     return validity
 
-# generator = MnistGenerator()
-# x = torch.randn(10, 100)
-# y = generator(x)
-# print(y.shape)
+class Generator(nn.Module):
+    def __init__(self, channel=3, z_hidden=100, g_hidden=64):
+        super(Generator, self).__init__()
+        self.main = nn.Sequential(
+            # input layer
+            nn.ConvTranspose2d(z_hidden, g_hidden * 8, 4, 1, 0, bias=False),  # (g_hidden*8)x4x4
+            nn.BatchNorm2d(g_hidden * 8),
+            nn.ReLU(True),
+            # 1st hidden layer
+            nn.ConvTranspose2d(g_hidden * 8, g_hidden * 4, 4, 2, 1, bias=False),  # (g_hidden*4)x8x8
+            nn.BatchNorm2d(g_hidden * 4),
+            nn.ReLU(True),
+            # 2nd hidden layer
+            nn.ConvTranspose2d(g_hidden * 4, g_hidden * 2, 4, 2, 1, bias=False),  # (g_hidden*2)x16x16
+            nn.BatchNorm2d(g_hidden * 2),
+            nn.ReLU(True),
+            # 3rd hidden layer
+            nn.ConvTranspose2d(g_hidden * 2, g_hidden, 4, 2, 1, bias=False),  # g_hidden x32x32
+            nn.BatchNorm2d(g_hidden),
+            nn.ReLU(True),
+            # output layer
+            nn.ConvTranspose2d(g_hidden, channel, 4, 2, 1, bias=False),  # Cx64x64
+            nn.Tanh()
+        )
 
-# x = torch.randn(10, 1, 28, 28)
-# m = MnistDiscriminator()
-# print(m(x).shape)
+    def forward(self, input):
+        return self.main(input)
+
+
+class Discriminator(nn.Module):
+    def __init__(self, channel=3, d_hidden=64):
+        super(Discriminator, self).__init__()
+        self.d_hidden = d_hidden
+
+        self.main = nn.Sequential(
+            # 1st layer
+            nn.Conv2d(channel, d_hidden, 4, 2, 1, bias=False),  # d_hiddenx32x32
+            nn.LeakyReLU(0.2, inplace=True),
+            # 2nd layer
+            nn.Conv2d(d_hidden, d_hidden * 2, 4, 2, 1, bias=False),  # (d_hidden*2)x16x16
+            nn.BatchNorm2d(d_hidden * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # 3rd layer
+            nn.Conv2d(d_hidden * 2, d_hidden * 4, 4, 2, 1, bias=False),  # (d_hidden*4)x8x8
+            nn.BatchNorm2d(d_hidden * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # 4th layer
+            nn.Conv2d(d_hidden * 4, d_hidden * 8, 4, 2, 1, bias=False),  # (d_hidden*8)x4x4
+            nn.BatchNorm2d(d_hidden * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # output layer
+            # nn.Conv2d(d_hidden * 8, 11, 4, 1, 0, bias=False),  # 1x1x1
+            # nn.Sigmoid()
+        )
+        self.fc = nn.Linear(d_hidden * 8 * 4 * 4, 11)
+
+    def forward(self, x):
+        x = self.main(x)
+        x = x.view(-1, self.d_hidden * 8 * 4 * 4)
+        return self.fc(x)

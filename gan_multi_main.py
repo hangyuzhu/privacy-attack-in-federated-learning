@@ -5,9 +5,10 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 
 from fleak.data.image_dataset import DatasetSplit
-from fleak.model.gan import MnistGenerator, MnistDiscriminator
+from fleak.model.gan import MnistGenerator, MnistDiscriminator, Generator, Discriminator
 from fleak.utils.train_eval import train, evaluate
 
 
@@ -31,13 +32,14 @@ noise_dim = 100
 
 # Data
 transform = transforms.Compose([
+        # transforms.Resize(64),
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))])
 train_dataset = datasets.MNIST('../federated_learning/data/mnist', train=True, download=True, transform=transform)
 test_dataset = datasets.MNIST('../federated_learning/data/mnist', train=False, transform=transform)
 
 # fixed noise
-fixed_noise = torch.randn(9, noise_dim, 1, 1, device=device)
+fixed_noise = torch.randn(16, noise_dim, device=device)
 
 # Sample to warm up
 warmup_dataloader = DataLoader(DatasetSplit(train_dataset, range(3000)), batch_size=BATCH_SIZE, shuffle=True)
@@ -77,11 +79,11 @@ for epoch in range(EPOCHS):
         optimizer_G.zero_grad()
 
         # Sample noise as generator input
-        noise = torch.randn(len(labels), noise_dim, 1, 1, device=device)
+        noise = torch.randn(len(labels), noise_dim, device=device)
         # Generate a batch of images
         fake_features = generator(noise)
         # Generate the tracked labels
-        tracked_labels = torch.full(labels.shape, 8, device=device)
+        tracked_labels = torch.full(labels.shape, 7, device=device)
 
         # Loss measures generator's ability to fool the discriminator
         g_loss = criterion(discriminator(fake_features), tracked_labels)
@@ -95,6 +97,7 @@ for epoch in range(EPOCHS):
         discriminator.train()
         optimizer_D.zero_grad()
 
+        fake_features = generator(noise)
         # Generate fake labels
         fake_labels = torch.full(labels.shape, 10, device=device)
 
@@ -117,9 +120,77 @@ for epoch in range(EPOCHS):
             generator.eval()
             with torch.no_grad():
                 predictions = generator(fixed_noise).detach().cpu()
-            for i in range(predictions.shape[0]):
+            # f_imgs = vutils.make_grid(predictions, padding=2, normalize=True)
+            # plt.axis('off')
+            # plt.imshow(np.transpose(f_imgs, (1, 2, 0)))
+            # plt.show()
+
+            for i in range(9):
                 plt.subplot(3, 3, i + 1)
                 ndarr = predictions[i].mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
                 plt.imshow(ndarr, cmap='gray')
                 plt.axis('off')
             plt.show()
+
+
+# for epoch in range(EPOCHS):
+#     for i, (features, labels) in enumerate(attack_dataloader):
+#         # ---------------------
+#         #  Train Discriminator
+#         # ---------------------
+#         generator.eval()
+#         discriminator.train()
+#         optimizer_D.zero_grad()
+#
+#         # Update D with real data
+#         features, labels = features.to(device), labels.to(device)
+#         real_loss = criterion(discriminator(features), labels)
+#         real_loss.backward()
+#
+#         # Update D with fake data
+#         noise = torch.randn(len(labels), noise_dim, device=device)
+#         fake_features = generator(noise)
+#         fake_labels = torch.full(labels.shape, 10, device=device)
+#         fake_loss = criterion(discriminator(fake_features.detach()), fake_labels)
+#         fake_loss.backward()
+#
+#         d_loss = real_loss + fake_loss
+#         optimizer_D.step()
+#
+#         # -----------------
+#         #  Train Generator
+#         # -----------------
+#         generator.train()
+#         discriminator.eval()
+#         optimizer_G.zero_grad()
+#
+#         fake_features = generator(noise)
+#         tracked_labels = torch.full(labels.shape, 8, device=device)
+#
+#         # Loss measures generator's ability to fool the discriminator
+#         g_loss = criterion(discriminator(fake_features), tracked_labels)
+#         g_loss.backward()
+#         optimizer_G.step()
+#
+#         print(
+#             "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
+#             % (epoch, EPOCHS, i, len(attack_dataloader), d_loss.item(), g_loss.item())
+#         )
+#
+#         # Generate fake images
+#         batches_done = epoch * len(attack_dataloader) + i
+#         if batches_done % 400 == 0:
+#             generator.eval()
+#             with torch.no_grad():
+#                 predictions = generator(fixed_noise).detach().cpu()
+#             f_imgs = vutils.make_grid(predictions, padding=2, normalize=True)
+#             plt.axis('off')
+#             plt.imshow(np.transpose(f_imgs, (1, 2, 0)))
+#             plt.show()
+#
+#             # for i in range(predictions.shape[0]):
+#             #     plt.subplot(3, 3, i + 1)
+#             #     ndarr = predictions[i].mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
+#             #     plt.imshow(ndarr, cmap='gray')
+#             #     plt.axis('off')
+#             # plt.show()
