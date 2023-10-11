@@ -59,9 +59,9 @@ test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 test_correct = evaluate(discriminator, device, test_loader)
 print('\ntest accuracy: ', test_correct / len(test_dataset))
 
-# attack_dataloader = DataLoader(DatasetSplit(train_dataset, torch.where(train_dataset.targets == 0)[0]),
-#                                batch_size=BATCH_SIZE, shuffle=True)
-attack_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+attack_dataloader = DataLoader(DatasetSplit(train_dataset, torch.where(train_dataset.targets == 8)[0]),
+                               batch_size=BATCH_SIZE, shuffle=True)
+# attack_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 # optimizer
 optimizer_G = optim.Adam(generator.parameters(), lr=1e-4)
@@ -70,6 +70,7 @@ optimizer_D = optim.Adam(discriminator.parameters(), lr=1e-4)
 for epoch in range(EPOCHS):
     for i, (features, labels) in enumerate(attack_dataloader):
         features, labels = features.to(device), labels.to(device)
+        noise = torch.randn(len(labels), noise_dim, device=device)
 
         # -----------------
         #  Train Generator
@@ -78,12 +79,10 @@ for epoch in range(EPOCHS):
         discriminator.eval()
         optimizer_G.zero_grad()
 
-        # Sample noise as generator input
-        noise = torch.randn(len(labels), noise_dim, device=device)
         # Generate a batch of images
         fake_features = generator(noise)
         # Generate the tracked labels
-        tracked_labels = torch.full(labels.shape, 7, device=device)
+        tracked_labels = torch.full(labels.shape, 8, device=device)
 
         # Loss measures generator's ability to fool the discriminator
         g_loss = criterion(discriminator(fake_features), tracked_labels)

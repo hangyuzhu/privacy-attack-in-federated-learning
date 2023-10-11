@@ -10,13 +10,14 @@ from fleak.attack import GAN
 
 # device = "cuda" if torch.cuda.is_available() else "CPU"
 
-class Maliciousclient(Client):
+
+class GanClient(Client):
     def __init__(self,
                  client_id=None,
                  client_group=None,
                  client_model=None,
                  num_epochs=1,
-                 img_size = None,
+                 img_size=None,
                  lr=0.1,
                  lr_decay=0.95,
                  momentum=0.5,
@@ -24,18 +25,19 @@ class Maliciousclient(Client):
                  valid_loader=None,
                  test_loader=None,
                  device=None):
-        super(Maliciousclient, self).__init__(client_id=client_id,
-                                             client_group=client_group,
-                                             client_model=client_model,
-                                             num_epochs=num_epochs,
-                                             lr=lr,
-                                             lr_decay=lr_decay,
-                                             momentum=momentum,
-                                             train_loader=train_loader,
-                                             valid_loader=valid_loader,
-                                             test_loader=test_loader,
-                                             device=device
-                                             )
+        super(GanClient, self).__init__(
+            client_id=client_id,
+            client_group=client_group,
+            client_model=client_model,
+            num_epochs=num_epochs,
+            lr=lr,
+            lr_decay=lr_decay,
+            momentum=momentum,
+            train_loader=train_loader,
+            valid_loader=valid_loader,
+            test_loader=test_loader,
+            device=device
+        )
         self.img_size = img_size
 
     def synchronize(self, cur_round, model_params):
