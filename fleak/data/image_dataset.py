@@ -130,7 +130,9 @@ def load_mnist_dataset(data_dir):
     # ToTensor normalize images to 0 ~ 1
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))])
+        transforms.Normalize((0.1307,), (0.3081,))
+        # transforms.Normalize((0.5,), (0.5,))
+    ])
     train_dataset = datasets.MNIST(data_dir, train=True, download=True)
     test_dataset = datasets.MNIST(data_dir, train=False)
     return train_dataset, test_dataset, transform, transform

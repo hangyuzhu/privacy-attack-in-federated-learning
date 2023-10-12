@@ -7,8 +7,9 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 
+
 from fleak.data.image_dataset import DatasetSplit
-from fleak.model.gan import MnistGenerator, MnistDiscriminator, Generator, Discriminator
+from fleak.model.gan_network import MnistGenerator, MnistDiscriminator, Generator, Discriminator
 from fleak.utils.train_eval import train, evaluate
 
 
@@ -46,22 +47,22 @@ warmup_dataloader = DataLoader(DatasetSplit(train_dataset, range(3000)), batch_s
 
 generator = MnistGenerator().to(device)
 discriminator = MnistDiscriminator().to(device)
-generator.apply(weights_init_normal)
-discriminator.apply(weights_init_normal)
+# generator.apply(weights_init_normal)
+# discriminator.apply(weights_init_normal)
 
 warmup_optimizer = optim.Adam(discriminator.parameters())
 criterion = nn.CrossEntropyLoss()
 
-for _ in range(20):
-    train(discriminator, device, warmup_dataloader, warmup_optimizer, criterion)
+# for _ in range(20):
+#     train(discriminator, device, warmup_dataloader, warmup_optimizer, criterion)
+#
+# test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
+# test_correct = evaluate(discriminator, device, test_loader)
+# print('\ntest accuracy: ', test_correct / len(test_dataset))
 
-test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
-test_correct = evaluate(discriminator, device, test_loader)
-print('\ntest accuracy: ', test_correct / len(test_dataset))
-
-attack_dataloader = DataLoader(DatasetSplit(train_dataset, torch.where(train_dataset.targets == 8)[0]),
-                               batch_size=BATCH_SIZE, shuffle=True)
-# attack_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+# attack_dataloader = DataLoader(DatasetSplit(train_dataset, torch.where(train_dataset.targets == 8)[0]),
+#                                batch_size=BATCH_SIZE, shuffle=True)
+attack_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 # optimizer
 optimizer_G = optim.Adam(generator.parameters(), lr=1e-4)
