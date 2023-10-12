@@ -5,6 +5,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import time
 import torchvision.utils as vutils
 
 
@@ -19,7 +20,9 @@ Batch_size = 2048
 Gan_epoch = 1
 Test_accuracy = []
 Models = {}
+Model_Optimizers = {}
 Client_data = {}
+dataloaders = {}
 # Client_labels = {}
 
 BATCH_SIZE = 256
@@ -63,6 +66,7 @@ for i in range(Clinets_per_round):
 
     # Each Client has one class
     Client_data.update({i: torch.where(train_dataset.targets == i)[0]})
+    dataloaders.update({i: DataLoader(DatasetSplit(train_dataset, Client_data[i]), batch_size=Batch_size, shuffle=True)})
     # Client_labels.update({i: train_labels[train_labels == i]})
     # # Shuffle
     # state = np.random.get_state()
@@ -132,9 +136,10 @@ criterion = nn.CrossEntropyLoss()
 # Clients' models
 for i in range(Clinets_per_round):
     Models.update({i: MnistDiscriminator()})
-    Models[i].compile(optimizer=keras.optimizers.Adam(learning_rate=1e-3),
-                      loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                      metrics=['accuracy'])
+    Model_Optimizers.update({i: optim.Adam(Models[i].parameters(), lr=1e-3)})
+        # compile(optimizer=keras.optimizers.Adam(learning_rate=1e-3),
+        #               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        #               metrics=['accuracy'])
 
 #########################################################################
 ##                            Attack setup                             ##
@@ -183,41 +188,66 @@ generator_optimizer = optim.SGD(generator.parameters(), lr=1e-3, weight_decay=1e
 discriminator_optimizer = optim.SGD(malicious_discriminator.parameters(), lr=1e-4, weight_decay=1e-7)
 
 # Training step
-@tf.function
-def train_step(images, labels):
-    noise = tf.random.normal([BATCH_SIZE, noise_dim])
-
-    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-        generated_images = generator(noise, training=True)
-
-        # real_output is the probability of the mimic number
-        real_output = malicious_discriminator(images, training=False)
-        fake_output = malicious_discriminator(generated_images, training=False)
-
-        gen_loss = generator_loss(fake_output)
-        disc_loss = discriminator_loss(real_output, fake_output, real_labels=labels)
-
-    gradients_of_generator = gen_tape.gradient(gen_loss, generator.trainable_variables)
-    gradients_of_discriminator = disc_tape.gradient(disc_loss, malicious_discriminator.trainable_variables)
-
-    generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
-    discriminator_optimizer.apply_gradients(
-        zip(gradients_of_discriminator, malicious_discriminator.trainable_variables))
+# @tf.function
+# def train_step(images, labels):
+#     noise = tf.random.normal([BATCH_SIZE, noise_dim])
+#
+#     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+#         generated_images = generator(noise, training=True)
+#
+#         # real_output is the probability of the mimic number
+#         real_output = malicious_discriminator(images, training=False)
+#         fake_output = malicious_discriminator(generated_images, training=False)
+#
+#         gen_loss = generator_loss(fake_output)
+#         disc_loss = discriminator_loss(real_output, fake_output, real_labels=labels)
+#
+#     gradients_of_generator = gen_tape.gradient(gen_loss, generator.trainable_variables)
+#     gradients_of_discriminator = disc_tape.gradient(disc_loss, malicious_discriminator.trainable_variables)
+#
+#     generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
+#     discriminator_optimizer.apply_gradients(
+#         zip(gradients_of_discriminator, malicious_discriminator.trainable_variables))
 
 
 # Train
-# def train(dataset, labels, epochs):
-#     for epoch in range(epochs):
-#         start = time.time()
-#         for i in range(round(len(dataset) / BATCH_SIZE)):
-#             image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-#             labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-#             train_step(image_batch, labels_batch)
-#
-#         print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start))
-#
-#     # Last epoch generate the images and merge them to the dataset
-#     generate_and_save_images(generator, epochs, seed)
+def train_gan(dataloader, epochs):
+    for epoch in range(epochs):
+        start = time.time()
+        for i, (features, labels) in enumerate(dataloader):
+            features, labels = features.to(device), labels.to(device)
+            noise = torch.randn(Batch_size, noise_dim, device=device)
+
+            # train generator
+            generator.train()
+            malicious_discriminator.eval()
+            generator_optimizer.zero_grad()
+
+            generated_images = generator(noise)
+            fake_output = malicious_discriminator(generated_images)
+            tracked_labels = torch.full(labels.shape, 3, device=device)
+
+            g_loss = cross_entropy(fake_output, tracked_labels)
+            g_loss.backward()
+            generator_optimizer.step()
+
+            # train discriminator
+            generator.eval()
+            malicious_discriminator.train()
+            discriminator_optimizer.zero_grad()
+
+            real_output = malicious_discriminator(features)
+
+
+        for i in range(round(len(dataset) / BATCH_SIZE)):
+            image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
+            labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
+            train_step(image_batch, labels_batch)
+
+        print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start))
+
+    # Last epoch generate the images and merge them to the dataset
+    generate_and_save_images(generator, epochs, seed)
 
 
 # Generate images to check the effect
@@ -265,16 +295,17 @@ for r in range(Round):
         # train the clients individually
         # if r != 0:
         #     Models[i].set_weights(tmp_weight)
-        Models[i].set_weights(tmp_weight)
+        Models[i].load_state_dict(tmp_weight)
 
-        train_ds = Client_data[i]
-        train_l = Client_labels[i]
+        # train_ds = Client_data[i]
+        # train_l = Client_labels[i]
+        train_ds = dataloaders[i]
 
         # Attack (suppose client 0 is malicious)
         if r != 0 and i == 0 and Test_accuracy[i - 1] > 0.85:
             print("Attack round: {}".format(attack_count + 1))
 
-            malicious_discriminator.set_weights(Models[i].get_weights())
+            malicious_discriminator.load_state_dict(Models[i].state_dict())
             # train(attack_ds, attack_l, Gan_epoch)
             train(attack_ds, attack_l, Gan_epoch)
 
