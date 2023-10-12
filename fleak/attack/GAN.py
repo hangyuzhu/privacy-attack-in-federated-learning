@@ -237,5 +237,7 @@ def plot_image(generator, fixed_noise, cur_round):
         plt.imshow(ndarr, cmap='gray')
         # plt.imshow(np.transpose(fake[i], (1, 2, 0)), cmap='gray')
         plt.axis('off')
-    plt.title("Communication Round %d" % cur_round)
+    # plt.pause(0.1)
+    # plt.clf()
+    # plt.title("Communication Round %d" % cur_round)
     plt.show()

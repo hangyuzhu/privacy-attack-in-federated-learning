@@ -13,8 +13,10 @@ from fleak.client import Client, GanClient
 # from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
-from fleak.data.partition import partition_dataset
-from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
+from fleak.data.partition import partition_dataset, partition_dataset_with_label_classes
+from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset, DatasetSplit
+from fleak.utils.train_eval import train
+import torch.optim as optim
 
 
 def main(args):
@@ -22,16 +24,27 @@ def main(args):
 
     # ======= Prepare client Dataset ========
     data_dir = args.data_path + args.dataset
+#     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
+#         partition_dataset(dataset=args.dataset,
+#                           data_dir=data_dir,
+# #                         data_augment=False,
+#                           data_augment=True,
+#                           iid=args.iid,
+#                           n_parties=args.total_clients,
+#                           valid_prop=args.valid_prop,
+#                           test_prop=args.test_prop,
+#                           beta=args.beta)
+
     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
-        partition_dataset(dataset=args.dataset,
+        partition_dataset_with_label_classes(dataset=args.dataset,
                           data_dir=data_dir,
-#                         data_augment=False,
+                          #                         data_augment=False,
                           data_augment=True,
                           iid=args.iid,
                           n_parties=args.total_clients,
                           valid_prop=args.valid_prop,
-                          test_prop=args.test_prop,
-                          beta=args.beta)
+                          test_prop=args.test_prop)
+
     n_classes = len(set(np.array(combine_dataset.targets)))
 
     # ======= Prepare partitioned Dataloader ========
@@ -74,6 +87,15 @@ def main(args):
     #     model.fc2 = nn.Linear(200, 11)
     # ======= Create Server ========
     server = Server(global_model=model(), momentum=args.server_momentum, device=args.device)
+    warmup_dataloader = DataLoader(
+        CustomImageDataset(data=combine_dataset.data[0:3000],
+                           targets=combine_dataset.targets[0:3000], transform=transform_train), batch_size=256)
+    warmup_optimizer = optim.Adam(server.global_model.parameters())
+    criterion = nn.CrossEntropyLoss()
+
+    for _ in range(20):
+        train(server.global_model, args.device, warmup_dataloader, warmup_optimizer, criterion)
+
 
     # ======= Create Clients ========
     all_clients = []
@@ -81,6 +103,7 @@ def main(args):
     all_clients.append(GanClient(client_id=0,
                                  client_model=model(),
                                  num_epochs=args.num_epochs,
+                                 gan_epochs=1,
                                  lr=args.lr,
                                  lr_decay=args.lr_decay,
                                  momentum=args.client_momentum,
@@ -186,7 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_shared_layers', default=-1, type=int, help='number of shared layers for fedper')
 
     parser.add_argument('--server_momentum', default=0., type=float, help='learning momentum on server')
-    parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
+    parser.add_argument('--client_momentum', default=0., type=float, help='learning momentum on client')
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
