@@ -6,8 +6,10 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torch.nn as nn
 
+from fleak.model import MnistDiscriminator
+
 from fleak.server import Server
-from fleak.client import Maliciousclient
+from fleak.client import Client, GanClient
 # from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
@@ -64,26 +66,50 @@ def main(args):
             for i in range(args.total_clients)]
 
     # ======= Create Model ========
-    model = get_model_options(args.dataset)[args.model]
+    # model = get_model_options(args.dataset)[args.model]
+    model = MnistDiscriminator
     # if args.dataset == 'mnist' and args.model == 'cnn':
     #     model.fc2 = nn.Linear(128, 11)
     # if args.dataset == 'mnist' and args.model == 'mlp':
     #     model.fc2 = nn.Linear(200, 11)
     # ======= Create Server ========
-    server = Server(global_model=model(n_classes + 1), momentum=args.server_momentum, device=args.device)
+    server = Server(global_model=model(), momentum=args.server_momentum, device=args.device)
 
     # ======= Create Clients ========
-    all_clients = [Maliciousclient(client_id=i,
-                          client_model=model(n_classes + 1),
-                          num_epochs=args.num_epochs,
-                          lr=args.lr,
-                          lr_decay=args.lr_decay,
-                          momentum=args.client_momentum,
-                          train_loader=train_loaders[i],
-                          valid_loader=valid_loaders[i],
-                          test_loader=test_loaders[i],
-                          device=args.device)
-                   for i in range(args.total_clients)]
+    all_clients = []
+    # set the first client as malicious client
+    all_clients.append(GanClient(client_id=0,
+                                 client_model=model(),
+                                 num_epochs=args.num_epochs,
+                                 lr=args.lr,
+                                 lr_decay=args.lr_decay,
+                                 momentum=args.client_momentum,
+                                 train_loader=train_loaders[0],
+                                 valid_loader=valid_loaders[0],
+                                 test_loader=test_loaders[0],
+                                 device=args.device))
+    for i in range(1, args.total_clients):
+        all_clients.append(Client(client_id=i,
+                                  client_model=model(),
+                                  num_epochs=args.num_epochs,
+                                  lr=args.lr,
+                                  lr_decay=args.lr_decay,
+                                  momentum=args.client_momentum,
+                                  train_loader=train_loaders[i],
+                                  valid_loader=valid_loaders[i],
+                                  test_loader=test_loaders[i],
+                                  device=args.device))
+    # all_clients = [Maliciousclient(client_id=i,
+    #                       client_model=model(n_classes + 1),
+    #                       num_epochs=args.num_epochs,
+    #                       lr=args.lr,
+    #                       lr_decay=args.lr_decay,
+    #                       momentum=args.client_momentum,
+    #                       train_loader=train_loaders[i],
+    #                       valid_loader=valid_loaders[i],
+    #                       test_loader=test_loaders[i],
+    #                       device=args.device)
+    #                for i in range(args.total_clients)]
 
     # ======= Federated Simulation ========
     start = time.time()
@@ -149,11 +175,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
     parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
-    parser.add_argument('--num_epochs', default=2, type=int, metavar='N',
+    parser.add_argument('--num_epochs', default=1, type=int, metavar='N',
                         help='number of local client epochs')
-    parser.add_argument('--batch_size', default=50, type=int, metavar='N',
+    parser.add_argument('--batch_size', default=256, type=int, metavar='N',
                         help='batch size when training and testing.')
-    parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+    parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--lr_decay', default=0.95, type=float, help='learning rate decay')
 
     # for fedper

@@ -7,8 +7,10 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 
+vutils
+
 from fleak.data.image_dataset import DatasetSplit
-from fleak.model.gan import MnistGenerator, MnistDiscriminator, Generator, Discriminator
+from fleak.model.gan_network import MnistGenerator, MnistDiscriminator, Generator, Discriminator
 from fleak.utils.train_eval import train, evaluate
 
 

@@ -7,6 +7,7 @@ from ..utils.train_eval import train, evaluate
 
 from .client import Client
 from fleak.attack import GAN
+from ..model import MnistGenerator
 
 # device = "cuda" if torch.cuda.is_available() else "CPU"
 
@@ -16,8 +17,10 @@ class GanClient(Client):
                  client_id=None,
                  client_group=None,
                  client_model=None,
+                 dataset=None,
+                 noise_dim=100,
                  num_epochs=1,
-                 img_size=None,
+                 gan_epochs=1,
                  lr=0.1,
                  lr_decay=0.95,
                  momentum=0.5,
@@ -38,14 +41,33 @@ class GanClient(Client):
             test_loader=test_loader,
             device=device
         )
-        self.img_size = img_size
+        self.discriminator = copy.deepcopy(self.client_model)
+        self.generator = MnistGenerator().to(self.device)
+        self.D_optimizer = optim.SGD(self.discriminator.parameters(), lr=1e-4, weight_decay=1e-7)
+        self.G_optimizer = optim.SGD(self.generator.parameters(), lr=1e-3, weight_decay=1e-7)
+        self.noise_dim = noise_dim
+        self.fixed_noise = torch.randn(16, self.noise_dim, device=device)
+
+        self.gan_epochs = gan_epochs
+        self.dataset = dataset
+        # self.img_size = img_size
 
     def synchronize(self, cur_round, model_params):
         self.cur_round = cur_round
         # inner deep copied
         self.client_model.load_state_dict(model_params)
+        # update discriminator
+        self.discriminator.load_state_dict(model_params)
 
-    def train(self):
+    def train(self, verbose=True):
+        # gan attack
+        for _ in range(self.gan_epochs):
+            GAN.attack(discriminator=self.discriminator, generator=self.generator, device=self.device,
+                       dataloader=self.train_loader, D_optimizer=self.D_optimizer, G_optimizer=self.G_optimizer,
+                       criterion=self.criterion, tracked_class=3, noise_dim=self.noise_dim)
+        if verbose:
+            GAN.plot_image(self.generator, self.fixed_noise, self.cur_round)
+        # local training
         for local_epoch in range(self.num_epochs):
             # local batch training
             train(model=self.client_model,
@@ -54,10 +76,6 @@ class GanClient(Client):
                   optimizer=self.optimizer,
                   criterion=self.criterion)
         self.optimizer.param_groups[0]["lr"] *= self.lr_decay
-        ## 训练完开始进行GAN攻击，令id=0的客户端为恶意客户端
-        if self.client_id == 0:
-            label_a = torch.randint(0, 9, (len(self.train_loader.dataset), 1))
-            gen_image, gen_label=GAN.GAN_attack(self.client_model, batch_size=64, img_size=self.img_size, attack_label=label_a, dataset=self.train_loader.dataset)
         return self.client_id, len(self.train_loader.dataset), self.client_model.state_dict()
 
     def evaluate(self, set_to_use='test'):

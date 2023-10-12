@@ -1,2 +1,2 @@
 from .client import Client
-from .ganclient import Maliciousclient
+from .ganclient import GanClient
