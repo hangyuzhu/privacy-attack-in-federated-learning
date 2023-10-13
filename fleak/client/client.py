@@ -26,8 +26,7 @@ class Client:
         self.cur_round = 0
         self.client_model = client_model.to(self.device)
         self.num_epochs = num_epochs
-        # self.optimizer = optim.SGD(self.client_model.parameters(), lr=lr, momentum=momentum, weight_decay=1e-5)
-        self.optimizer = optim.Adam(self.client_model.parameters(), lr=lr)
+        self.optimizer = optim.SGD(self.client_model.parameters(), lr=lr, momentum=momentum, weight_decay=1e-5)
         self.lr_decay = lr_decay    # lr decay for each FL round
         self.criterion = nn.CrossEntropyLoss().to(self.device)
         self.train_loader = train_loader

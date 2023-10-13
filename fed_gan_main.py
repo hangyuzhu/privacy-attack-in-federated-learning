@@ -68,12 +68,8 @@ def main(args):
             for i in range(args.total_clients)]
 
     # ======= Create Model ========
-    # model = get_model_options(args.dataset)[args.model]
     model = MnistDiscriminator
-    # if args.dataset == 'mnist' and args.model == 'cnn':
-    #     model.fc2 = nn.Linear(128, 11)
-    # if args.dataset == 'mnist' and args.model == 'mlp':
-    #     model.fc2 = nn.Linear(200, 11)
+
     # ======= Create Server ========
     server = Server(global_model=model(), momentum=args.server_momentum, device=args.device)
 

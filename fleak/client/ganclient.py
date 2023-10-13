@@ -1,15 +1,10 @@
-import copy
-
 import torch
 import torch.optim as optim
-import torch.nn as nn
 from ..utils.train_eval import train, evaluate
 
 from .client import Client
 from fleak.attack import GAN
 from ..model import MnistGenerator
-
-# device = "cuda" if torch.cuda.is_available() else "CPU"
 
 
 class GanClient(Client):
@@ -41,31 +36,29 @@ class GanClient(Client):
             test_loader=test_loader,
             device=device
         )
-        self.discriminator = copy.deepcopy(self.client_model)
         self.generator = MnistGenerator().to(self.device)
-        self.D_optimizer = optim.SGD(self.discriminator.parameters(), lr=1e-4, weight_decay=1e-7)
-        self.G_optimizer = optim.SGD(self.generator.parameters(), lr=1e-3, weight_decay=1e-7)
+        # discriminator optimizer
+        self.D_optimizer = optim.SGD(self.client_model.parameters(), lr=1e-3, weight_decay=1e-7)
+        # generator optimizer
+        self.G_optimizer = optim.SGD(self.generator.parameters(), lr=1e-4, weight_decay=1e-7)
         self.noise_dim = noise_dim
         self.fixed_noise = torch.randn(16, self.noise_dim, device=device)
 
         self.gan_epochs = gan_epochs
         self.dataset = dataset
-        # self.img_size = img_size
 
     def synchronize(self, cur_round, model_params):
         self.cur_round = cur_round
-        # inner deep copied
-        self.client_model.load_state_dict(model_params)
         # update discriminator
-        self.discriminator.load_state_dict(model_params)
+        self.client_model.load_state_dict(model_params)
 
     def train(self, verbose=True):
         # gan attack
         for _ in range(self.gan_epochs):
-            GAN.attack(discriminator=self.discriminator, generator=self.generator, device=self.device,
+            GAN.attack(discriminator=self.client_model, generator=self.generator, device=self.device,
                        dataloader=self.train_loader, D_optimizer=self.D_optimizer, G_optimizer=self.G_optimizer,
                        criterion=self.criterion, tracked_class=3, noise_dim=self.noise_dim)
-        if verbose:
+        if verbose and (self.cur_round + 1) % 50 == 0:
             GAN.plot_image(self.generator, self.fixed_noise, self.cur_round)
         # local training
         for local_epoch in range(self.num_epochs):
