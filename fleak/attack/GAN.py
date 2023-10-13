@@ -1,3 +1,4 @@
+import os
 import torch
 import matplotlib.pyplot as plt
 
@@ -45,17 +46,16 @@ def attack(discriminator, generator, device, dataloader, D_optimizer, G_optimize
         D_optimizer.step()
 
 
-def generate_save_images(generator, fixed_noise, cur_round):
+def generate_save_images(generator, fixed_noise, path, data_name):
     generator.eval()
     with torch.no_grad():
-        fake = generator(fixed_noise).detach()
-    for i in range(9):
-        plt.subplot(3, 3, i + 1)
+        fake = generator(fixed_noise).detach().cpu()
+
+    for i in range(16):
+        plt.subplot(4, 4, i + 1)
         ndarr = fake[i].mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
         plt.imshow(ndarr, cmap='gray')
-        # plt.imshow(np.transpose(fake[i], (1, 2, 0)), cmap='gray')
         plt.axis('off')
-    # plt.pause(0.1)
-    # plt.clf()
-    # plt.title("Communication Round %d" % cur_round)
-    plt.show()
+    if not os.path.exists(path):
+        os.makedirs(path)
+    plt.savefig(os.path.join(path, data_name + '_fake_image.png'))

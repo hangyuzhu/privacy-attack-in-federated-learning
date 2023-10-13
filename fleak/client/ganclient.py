@@ -1,9 +1,10 @@
 import torch
 import torch.optim as optim
-from ..utils.train_eval import train, evaluate
+from ..utils.train_eval import evaluate
 
 from .client import Client
 from fleak.attack import GAN
+from ..utils.train_eval import train
 from ..model import MnistGenerator
 
 
@@ -12,7 +13,7 @@ class GanClient(Client):
                  client_id=None,
                  client_group=None,
                  client_model=None,
-                 dataset=None,
+                 data_name=None,
                  noise_dim=100,
                  num_epochs=1,
                  gan_epochs=1,
@@ -45,22 +46,21 @@ class GanClient(Client):
         self.fixed_noise = torch.randn(16, self.noise_dim, device=device)
 
         self.gan_epochs = gan_epochs
-        self.dataset = dataset
+        self.data_name = data_name
 
     def synchronize(self, cur_round, model_params):
         self.cur_round = cur_round
         # update discriminator
         self.client_model.load_state_dict(model_params)
 
-    def train(self, verbose=True):
+    def train(self):
         # gan attack
         for _ in range(self.gan_epochs):
             GAN.attack(discriminator=self.client_model, generator=self.generator, device=self.device,
                        dataloader=self.train_loader, D_optimizer=self.D_optimizer, G_optimizer=self.G_optimizer,
                        criterion=self.criterion, tracked_class=3, noise_dim=self.noise_dim)
-        if verbose and (self.cur_round + 1) % 50 == 0:
-            GAN.plot_image(self.generator, self.fixed_noise, self.cur_round)
-        # local training
+        # if verbose and (self.cur_round + 1) % 50 == 0:
+        GAN.generate_save_images(self.generator, self.fixed_noise, 'saved_results', self.data_name)
         for local_epoch in range(self.num_epochs):
             # local batch training
             train(model=self.client_model,
@@ -70,8 +70,6 @@ class GanClient(Client):
                   criterion=self.criterion)
         self.optimizer.param_groups[0]["lr"] *= self.lr_decay
         return self.client_id, len(self.train_loader.dataset), self.client_model.state_dict()
-
-    # def adversarial(self, ):
 
     def evaluate(self, set_to_use='test'):
         assert set_to_use in ['train', 'test', 'valid']
@@ -85,9 +83,3 @@ class GanClient(Client):
             loader = self.valid_loader
         correct = evaluate(model=self.client_model, device=self.device, eval_loader=loader)
         return correct, len(loader.dataset)
-
-    def save(self, path):
-        torch.save(self.client_model.state_dict(), path)
-
-
-

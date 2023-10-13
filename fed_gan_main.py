@@ -13,10 +13,8 @@ from fleak.client import Client, GanClient
 # from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
-from fleak.data.partition import partition_dataset, partition_dataset_with_label_classes
-from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset, DatasetSplit
-from fleak.utils.train_eval import train
-import torch.optim as optim
+from fleak.data.partition import partition_dataset
+from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
 
 
 def main(args):
@@ -78,6 +76,7 @@ def main(args):
     # set the first client as malicious client
     all_clients.append(GanClient(client_id=0,
                                  client_model=model(),
+                                 data_name=args.dataset,
                                  num_epochs=args.num_epochs,
                                  gan_epochs=2,
                                  lr=args.lr,
@@ -98,17 +97,6 @@ def main(args):
                                   valid_loader=valid_loaders[i],
                                   test_loader=test_loaders[i],
                                   device=args.device))
-    # all_clients = [Maliciousclient(client_id=i,
-    #                       client_model=model(n_classes + 1),
-    #                       num_epochs=args.num_epochs,
-    #                       lr=args.lr,
-    #                       lr_decay=args.lr_decay,
-    #                       momentum=args.client_momentum,
-    #                       train_loader=train_loaders[i],
-    #                       valid_loader=valid_loaders[i],
-    #                       test_loader=test_loaders[i],
-    #                       device=args.device)
-    #                for i in range(args.total_clients)]
 
     # ======= Federated Simulation ========
     start = time.time()
@@ -152,14 +140,10 @@ def main(args):
         with open(record_file_name, 'w') as file:
             json.dump(eval_accuracy, file)
 
-    # =======GAN ATTACK=========
-
-
 
 def online(clients):
     """We assume all users are always online."""
     return clients
-
 
 
 if __name__ == '__main__':
