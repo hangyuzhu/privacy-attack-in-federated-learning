@@ -24,26 +24,15 @@ def main(args):
 
     # ======= Prepare client Dataset ========
     data_dir = args.data_path + args.dataset
-#     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
-#         partition_dataset(dataset=args.dataset,
-#                           data_dir=data_dir,
-# #                         data_augment=False,
-#                           data_augment=True,
-#                           iid=args.iid,
-#                           n_parties=args.total_clients,
-#                           valid_prop=args.valid_prop,
-#                           test_prop=args.test_prop,
-#                           beta=args.beta)
-
     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
-        partition_dataset_with_label_classes(dataset=args.dataset,
+        partition_dataset(dataset=args.dataset,
                           data_dir=data_dir,
-                          #                         data_augment=False,
                           data_augment=True,
                           iid=args.iid,
                           n_parties=args.total_clients,
                           valid_prop=args.valid_prop,
-                          test_prop=args.test_prop)
+                          test_prop=args.test_prop,
+                          beta=args.beta)
 
     n_classes = len(set(np.array(combine_dataset.targets)))
 
@@ -87,15 +76,6 @@ def main(args):
     #     model.fc2 = nn.Linear(200, 11)
     # ======= Create Server ========
     server = Server(global_model=model(), momentum=args.server_momentum, device=args.device)
-    warmup_dataloader = DataLoader(
-        CustomImageDataset(data=combine_dataset.data[0:3000],
-                           targets=combine_dataset.targets[0:3000], transform=transform_train), batch_size=256)
-    warmup_optimizer = optim.Adam(server.global_model.parameters())
-    criterion = nn.CrossEntropyLoss()
-
-    for _ in range(20):
-        train(server.global_model, args.device, warmup_dataloader, warmup_optimizer, criterion)
-
 
     # ======= Create Clients ========
     all_clients = []
@@ -103,7 +83,7 @@ def main(args):
     all_clients.append(GanClient(client_id=0,
                                  client_model=model(),
                                  num_epochs=args.num_epochs,
-                                 gan_epochs=1,
+                                 gan_epochs=2,
                                  lr=args.lr,
                                  lr_decay=args.lr_decay,
                                  momentum=args.client_momentum,
@@ -195,14 +175,14 @@ if __name__ == '__main__':
     parser.add_argument('--strategy', type=str, default='fedavg', choices=STRATEGY,
                         help='strategy used in federated learning')
 
-    parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
+    parser.add_argument('--num_rounds', default=300, type=int, help='num_rounds')
     parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
     parser.add_argument('--num_epochs', default=1, type=int, metavar='N',
                         help='number of local client epochs')
-    parser.add_argument('--batch_size', default=256, type=int, metavar='N',
+    parser.add_argument('--batch_size', default=50, type=int, metavar='N',
                         help='batch size when training and testing.')
-    parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
+    parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
     parser.add_argument('--lr_decay', default=0.95, type=float, help='learning rate decay')
 
     # for fedper
