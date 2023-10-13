@@ -9,7 +9,7 @@ import time
 import torchvision.utils as vutils
 
 
-from fleak.data.image_dataset import DatasetSplit
+from fleak.data.image_dataset import DatasetSplit, CustomImageDataset
 from fleak.model.gan_network import MnistGenerator, MnistDiscriminator, Generator, Discriminator
 from fleak.utils.train_eval import train, evaluate
 
@@ -63,10 +63,10 @@ warmup_dataloader = DataLoader(DatasetSplit(train_dataset, range(3000)), batch_s
 
 # Each Client owns different data, Attacker has no targeted samples
 for i in range(Clinets_per_round):
-
     # Each Client has one class
     Client_data.update({i: torch.where(train_dataset.targets == i)[0]})
-    dataloaders.update({i: DataLoader(DatasetSplit(train_dataset, Client_data[i]), batch_size=Batch_size, shuffle=True)})
+    dataloaders.update({i: DataLoader(DatasetSplit(train_dataset, Client_data[i]),
+                                      batch_size=Batch_size, shuffle=True)})
     # Client_labels.update({i: train_labels[train_labels == i]})
     # # Shuffle
     # state = np.random.get_state()
@@ -75,7 +75,7 @@ for i in range(Clinets_per_round):
     # np.random.shuffle(Client_labels[i])
     # print(len(train_labels[train_labels==i]))
 
-# attack_ds = np.array(Client_data[0])
+attack_ds = dataloaders[0]
 # attack_l = np.array(Client_labels[0])
 
 
@@ -237,31 +237,53 @@ def train_gan(dataloader, epochs):
             discriminator_optimizer.zero_grad()
 
             real_output = malicious_discriminator(features)
+            fake_output = generator(noise)
+            fake_labels = torch.full(labels.shape, 10, device=device)
 
+            real_loss = cross_entropy(real_output, labels)
+            fake_loss = cross_entropy(fake_output, fake_labels)
+            d_loss = real_loss + fake_loss
+            d_loss.backward()
+            discriminator_optimizer.step()
 
-        for i in range(round(len(dataset) / BATCH_SIZE)):
-            image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-            labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
-            train_step(image_batch, labels_batch)
+        # for i in range(round(len(dataset) / BATCH_SIZE)):
+        #     image_batch = dataset[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
+        #     labels_batch = labels[i * BATCH_SIZE:min(len(dataset), (i + 1) * BATCH_SIZE)]
+        #     train_step(image_batch, labels_batch)
 
         print('Time for epoch {} is {} sec'.format(epoch + 1, time.time() - start))
 
-    # Last epoch generate the images and merge them to the dataset
-    generate_and_save_images(generator, epochs, seed)
+    # # Last epoch generate the images and merge them to the dataset
+    # generate_and_save_images(generator, epochs, seed)
+    generate_images(generator, seed)
 
+
+# # Generate images to check the effect
+# def generate_and_save_images(model, epoch, test_input):
+#     predictions = model(test_input, training=False)
+#
+#     fig = plt.figure(figsize=(6, 6))
+#
+#     for i in range(predictions.shape[0]):
+#         plt.subplot(6, 6, i + 1)
+#         plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
+#         plt.axis('off')
+#
+#     plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
 
 # Generate images to check the effect
-def generate_and_save_images(model, epoch, test_input):
-    predictions = model(test_input, training=False)
+def generate_images(model, test_input):
+    model.eval()
+    predictions = model(test_input)
 
-    fig = plt.figure(figsize=(6, 6))
+    plt.figure(figsize=(8, 8))
 
-    for i in range(predictions.shape[0]):
-        plt.subplot(6, 6, i + 1)
-        plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
+    for i in range(9):
+        ndarr = predictions[i].mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
+        plt.imshow(ndarr, cmap='gray')
         plt.axis('off')
 
-    plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
+    plt.show()
 
 
 #########################################################################
@@ -307,7 +329,7 @@ for r in range(Round):
 
             malicious_discriminator.load_state_dict(Models[i].state_dict())
             # train(attack_ds, attack_l, Gan_epoch)
-            train(attack_ds, attack_l, Gan_epoch)
+            train_gan(attack_ds, Gan_epoch)
 
             predictions = generator(seed_merge, training=False)
             malicious_images = np.array(predictions)
