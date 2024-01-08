@@ -7,8 +7,9 @@ RESULTS = ['results_fedavg', 'results_fedcrowd', 'results_fedbcc', 'results_bcc'
 
 
 def get_model_options(dataset):
-    from ..model.neural_network import MnistMLP, CifarMLP, MnistConvNet, CifarConvNet, \
+    from ..model import MnistMLP, CifarMLP, MnistConvNet, CifarConvNet, \
         ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
+    from ..model import MnistGenerator, MnistDiscriminator
     model = {
         "mlp": MnistMLP if dataset == 'mnist' else CifarMLP,
         "cnn": MnistConvNet if dataset == 'mnist' else CifarConvNet,
