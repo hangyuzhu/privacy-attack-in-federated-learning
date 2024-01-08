@@ -1,4 +1,3 @@
-import copy
 import time
 import json
 import datetime
@@ -18,9 +17,16 @@ from fleak.data.partition import partition_dataset
 from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
 from fleak.attack.idlg import reconstruct_dlg
 
+
+
+
+
+
 setup = dict(device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)
 dm = torch.as_tensor([0.4914672374725342, 0.4822617471218109, 0.4467701315879822], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]
 ds = torch.as_tensor([0.24703224003314972, 0.24348513782024384, 0.26158785820007324], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]
+
+
 def main(args):
     clients_per_round = int(args.total_clients * args.C)
 
@@ -29,14 +35,14 @@ def main(args):
     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
         partition_dataset(dataset=args.dataset,
                           data_dir=data_dir,
-                          #                         data_augment=False,
+                          # data_augment=False,
                           data_augment=True,
                           iid=args.iid,
                           n_parties=args.total_clients,
                           valid_prop=args.valid_prop,
                           test_prop=args.test_prop,
                           beta=args.beta)
-    n_classes = len(set(np.array(combine_dataset.targets)))
+    n_classes = len(set(np.array(combine_dataset.targets.cpu())))
 
     # ======= Prepare partitioned Dataloader ========
     if args.dataset == 'tiny_imagenet':
@@ -79,7 +85,7 @@ def main(args):
         shape_img = [1, 3, 32, 32]
         label_size = [1, 10]
         num_class = 100
-    elif args.dataset == "MNIST":
+    elif args.dataset == "mnist":
         shape_img = [1, 1, 28, 28]
         label_size = [1, 10]
         num_class = 10
@@ -123,8 +129,10 @@ def main(args):
         eval_acc = server.train_eval(set_to_use=args.set_to_use)
         if i > 0:
             eval_accuracy.append(eval_acc)
-        ## dlg attack
-        reconstruct_data, reconstruct_label = server.attack(method="iDLG")
+
+
+        ##attack
+        reconstruct_data, reconstruct_label = server.attack(method=args.attack)
         history.append(reconstruct_data.clone().detach())
 
         server.federated_averaging()
@@ -132,22 +140,31 @@ def main(args):
         print('One communication round training time: %.4fs' % duration_time)
 
     ## show reconstructions
+    path = r'D:\leakage-attack-in-federated-learning\saved_results'
     for i, _recon in enumerate(history):
-        _recon.mul_(ds).add_(dm).clamp_(0, 1)
-        _recon = _recon.to(dtype=torch.float32)
-        plt.subplot(10, 10, i + 1)
-        plt.imshow(_recon[0].permute(1, 2, 0).cpu())
-        plt.title(plt.title("round = %d" % i))
+        plt.subplot(4, 4, i + 1)
+        ndarr = _recon.mul_(ds).add_(dm).clamp_(min=0, max=1).permute(1,2,0).to("cpu", torch.float32).numpy()
+        plt.imshow(ndarr, cmap='gray')
         plt.axis('off')
-
-    # reconstruct_data = reconstruct_data.detach()
-    # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)
-    # reconstruct_data = reconstruct_data.to(dtype=torch.float32)
-    # plt.subplot(3, 10, i + 1)
-    # plt.imshow(reconstruct_data[0].permute(1, 2, 0).cpu())
-    # plt.title(plt.title("round = %d" % i))
-    # history.append(tt(reconstruct_data[0].cpu()))
-    plt.show()
+    if not os.path.exists(path):
+        os.makedirs(path)
+    plt.savefig(os.path.join(path, args.attack + args.dataset + 'reconstructed_data.png'))
+    # for i, _recon in enumerate(history):
+    #     _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
+    #     _recon = _recon.to(dtype=torch.float32)
+    #     plt.subplot(10, 10, i + 1)
+    #     plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+    #     plt.title(plt.title("round = %d" % i))
+    #     plt.axis('off')
+    #
+    # # reconstruct_data = reconstruct_data.detach()
+    # # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)
+    # # reconstruct_data = reconstruct_data.to(dtype=torch.float32)
+    # # plt.subplot(3, 10, i + 1)
+    # # plt.imshow(reconstruct_data[0].permute(1, 2, 0).cpu())
+    # # plt.title(plt.title("round = %d" % i))
+    # # history.append(tt(reconstruct_data[0].cpu()))
+    # plt.show()
     # final eval acc
     eval_acc = server.evaluate(set_to_use=args.set_to_use)
     eval_accuracy.append(eval_acc)
@@ -187,7 +204,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')
@@ -198,6 +215,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--device', default='cuda:0', help='device')
     parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
+
+    parser.add_argument('--attack', default='DLG', help='the attack type')
 
     args = parser.parse_args()
     print('\n============== Federated Learning Setting ==============')
