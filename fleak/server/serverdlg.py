@@ -86,9 +86,10 @@ class Serverdlg(Server):
             path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
             generator = MnistGenerator().to(device)
             generator.load_state_dict(torch.load(path)['state_dict'])
-            noise = torch.randn(1, 100, device=device)
-            dummy_data = generator(noise)
-            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1],dummy_data,self.dummy_labels,self.global_model,300, 0.001)
+            generator.eval()
+            noise = torch.randn(1, 100).to(device)
+            dummy_data = generator(noise).detach()
+            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model,300, 0.001)
         return reconstruct_data, reconstruct_label
 
 
