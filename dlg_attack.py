@@ -140,15 +140,6 @@ def main(args):
         print('One communication round training time: %.4fs' % duration_time)
 
     ## show reconstructions
-    # path = r'D:\leakage-attack-in-federated-learning\saved_results'
-    # for i, _recon in enumerate(history):
-    #     plt.subplot(4, 4, i + 1)
-    #     ndarr = _recon.mul_(ds).add_(dm).clamp_(min=0, max=1).permute(1,2,0).to("cpu", torch.float32).numpy()
-    #     plt.imshow(ndarr, cmap='gray')
-    #     plt.axis('off')
-    # if not os.path.exists(path):
-    #     os.makedirs(path)
-    # plt.savefig(os.path.join(path, args.attack + args.dataset + 'reconstructed_data.png'))
     if args.dataset == 'mnist':
         for i, _recon in enumerate(history):
             plt.subplot(10, 10, i + 1)
