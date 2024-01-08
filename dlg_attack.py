@@ -140,31 +140,43 @@ def main(args):
         print('One communication round training time: %.4fs' % duration_time)
 
     ## show reconstructions
+    # path = r'D:\leakage-attack-in-federated-learning\saved_results'
+    # for i, _recon in enumerate(history):
+    #     plt.subplot(4, 4, i + 1)
+    #     ndarr = _recon.mul_(ds).add_(dm).clamp_(min=0, max=1).permute(1,2,0).to("cpu", torch.float32).numpy()
+    #     plt.imshow(ndarr, cmap='gray')
+    #     plt.axis('off')
+    # if not os.path.exists(path):
+    #     os.makedirs(path)
+    # plt.savefig(os.path.join(path, args.attack + args.dataset + 'reconstructed_data.png'))
+    if args.dataset == 'mnist':
+        for i, _recon in enumerate(history):
+            plt.subplot(10, 10, i + 1)
+            _recon.mul(255).add_(0.5).clamp_(0, 255)
+            _recon = _recon.to(dtype=torch.uint8)
+            plt.imshow(_recon[0].permute(1, 2, 0).cpu(), cmap='gray')
+            plt.axis('off')
+    else:
+        for i, _recon in enumerate(history):
+            _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
+            _recon = _recon.to(dtype=torch.float32)
+            plt.subplot(10, 10, i + 1)
+            plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+            plt.title(plt.title("round = %d" % i))
+            plt.axis('off')
     path = r'D:\leakage-attack-in-federated-learning\saved_results'
-    for i, _recon in enumerate(history):
-        plt.subplot(4, 4, i + 1)
-        ndarr = _recon.mul_(ds).add_(dm).clamp_(min=0, max=1).permute(1,2,0).to("cpu", torch.float32).numpy()
-        plt.imshow(ndarr, cmap='gray')
-        plt.axis('off')
     if not os.path.exists(path):
         os.makedirs(path)
-    plt.savefig(os.path.join(path, args.attack + args.dataset + 'reconstructed_data.png'))
-    # for i, _recon in enumerate(history):
-    #     _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
-    #     _recon = _recon.to(dtype=torch.float32)
-    #     plt.subplot(10, 10, i + 1)
-    #     plt.imshow(_recon[0].permute(1, 2, 0).cpu())
-    #     plt.title(plt.title("round = %d" % i))
-    #     plt.axis('off')
-    #
-    # # reconstruct_data = reconstruct_data.detach()
-    # # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)
-    # # reconstruct_data = reconstruct_data.to(dtype=torch.float32)
-    # # plt.subplot(3, 10, i + 1)
-    # # plt.imshow(reconstruct_data[0].permute(1, 2, 0).cpu())
-    # # plt.title(plt.title("round = %d" % i))
-    # # history.append(tt(reconstruct_data[0].cpu()))
-    # plt.show()
+    plt.savefig(os.path.join(path, args.attack + args.dataset + '_fake_image.png'))
+
+    # reconstruct_data = reconstruct_data.detach()
+    # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)
+    # reconstruct_data = reconstruct_data.to(dtype=torch.float32)
+    # plt.subplot(3, 10, i + 1)
+    # plt.imshow(reconstruct_data[0].permute(1, 2, 0).cpu())
+    # plt.title(plt.title("round = %d" % i))
+    # history.append(tt(reconstruct_data[0].cpu()))
+    plt.show()
     # final eval acc
     eval_acc = server.evaluate(set_to_use=args.set_to_use)
     eval_accuracy.append(eval_acc)
