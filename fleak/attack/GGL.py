@@ -42,9 +42,11 @@ def ng_loss(z, input_gradient, labels, generator, fl_model,num_classes = 10,metr
     dist = 0
     for i in range(len(trial_gradient)):
         if metric == 'l2':
-            dist += ((trial_gradient[i] - input_gradient.values[i]).pow(2)).sum() * weight[i]
+            dist += ((trial_gradient[i] - list(input_gradient.values())[i]).pow(2)).sum() * weight[i]
         elif metric == 'l1':
-            dist += ((trial_gradient[i] - input_gradient.values[i]).abs()).sum() * weight[i]
+            dist += ((trial_gradient[i] - list(input_gradient.values())[i]).abs()).sum() * weight[i]
+
+
     dist /= len(trial_gradient)
 
     if not use_tanh:
