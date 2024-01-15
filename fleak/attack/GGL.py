@@ -1,12 +1,7 @@
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
-import copy
-import numpy as np
-from tqdm import tqdm
-import nevergrad as ng
 from fleak.attack.GGL_CLASS import GGL_reconstruction
-from fleak.utils import loss_fn
+
 
 device = "cuda" if torch.cuda.is_available() else "CPU"
 
