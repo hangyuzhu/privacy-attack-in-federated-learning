@@ -56,9 +56,6 @@ class GGL_reconstruction():
         with torch.no_grad():
             x_res = self.generator(z_res)
         # x_res = nn.functional.interpolate(x_res, size=(224, 224), mode='area')
-        ## save the result
-        # path = r'D:\leakage-attack-in-federated-learning\saved_results'
-        # for i in range
 
 
         return x_res, labels
