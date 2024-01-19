@@ -8,10 +8,11 @@ from .server import Server
 from fleak.attack.idlg import reconstruct_dlg,reconstruct_idlg
 from fleak.attack.inverting_gradients import invertinggradients
 from fleak.model.gan_network import MnistGenerator
+from fleak.attack.GGL import GGLreconstruction
 device = "cuda" if torch.cuda.is_available() else "CPU"
 
 
-class Serverdlg(Server):
+class ServerDLG(Server):
 
     def __init__(self,
                  server_id=None,
@@ -21,7 +22,7 @@ class Serverdlg(Server):
                  data_size=None,
                  label_size=None,
                  device=None):
-        super(Serverdlg, self).__init__(server_id=server_id,
+        super(ServerDLG, self).__init__(server_id=server_id,
                                         server_group=server_group,
                                         global_model=global_model,
                                         momentum=momentum,
@@ -87,9 +88,12 @@ class Serverdlg(Server):
             generator = MnistGenerator().to(device)
             generator.load_state_dict(torch.load(path)['state_dict'])
             generator.eval()
-            noise = torch.randn(1, 100).to(device)
-            dummy_data = generator(noise).detach()
-            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model,300, 0.001)
+            reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator, self.updates[0][-1])
+            # noise = torch.randn(1, 100).to(device)
+            # dummy_data = generator(noise).detach()
+            # reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+        elif method == "GRNN":
+            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         return reconstruct_data, reconstruct_label
 
 

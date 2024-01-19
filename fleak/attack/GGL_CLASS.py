@@ -23,11 +23,11 @@ class GGL_reconstruction():
         parametrization = ng.p.Array(init=np.random.rand(search_dim[0]))
         self.optimizer = ng.optimizers.registry['CMA'](parametrization=parametrization, budget=budget)
 
-        self.setting = {'loss_fn':loss_fn,'fl_model':fl_model,'numclass':numclass}
+        self.setting = {'loss_fn':loss_fn,'fl_model':fl_model}
 
 
     def evaluate_loss(self, z, labels, input_gradients):
-        return self.ng_loss(z=z, input_gradients=input_gradients, metric='l2', labels=labels, generator=self.generator,weight=self.weight, use_tanh=self.use_tanh, **self.setting)
+        return self.ng_loss(z=z, input_gradients=input_gradients, metric='l2', labels=labels, generator=self.generator, weight=self.weight, use_tanh=self.use_tanh, **self.setting)
 
     def reconstruct(self, input_gradients, use_pbar=True):
         labels = self.infer_label(input_gradients)
@@ -63,6 +63,7 @@ class GGL_reconstruction():
     @staticmethod
     def infer_label(input_gradient):
         label_pred = torch.argmin(torch.sum(list(input_gradient.values())[-4])).detach().reshape((1,))
+        # label_pred = torch.argmin(torch.sum(list(input_gradient)[-2])).detach().reshape((1,))
         return label_pred
 
     @staticmethod
@@ -88,6 +89,7 @@ class GGL_reconstruction():
         for i in range(len(trial_gradient)):
             if metric == 'l2':
                 dist += ((trial_gradient[i] - list(input_gradients.values())[i]).pow(2)).sum() * weight[i]
+                # dist += ((trial_gradient[i] - list(input_gradients)[i]).pow(2)).sum() * weight[i]
             elif metric == 'l1':
                 dist += ((trial_gradient[i] - list(input_gradients.values())[i]).abs()).sum() * weight[i]
 

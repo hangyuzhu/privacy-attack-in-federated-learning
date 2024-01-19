@@ -9,7 +9,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from fleak.server import Server, serverdlg
+from fleak.server import server_with_data
 from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
@@ -78,20 +78,16 @@ def main(args):
     # ======= Datasize ========
     if args.dataset == "cifar10":
         # shape_img = [1, 3, 32, 32]
-        shape_img = [1, 3, 32, 32]
-        label_size = [1, 10]
+        shape_img = (32, 32)
         num_class = 10
     elif args.dataset == "cifar100":
-        shape_img = [1, 3, 32, 32]
-        label_size = [1, 10]
+        shape_img = (32, 32)
         num_class = 100
     elif args.dataset == "mnist":
-        shape_img = [1, 1, 28, 28]
-        label_size = [1, 10]
+        shape_img = (28, 28)
         num_class = 10
     elif args.dataset == "ImagenetAnimal":
-        shape_img = [1, 3, 224, 224]
-        label_size = [1, 10]
+        shape_img = (224, 224)
         num_class = 397
 
     tt = transforms.ToPILImage()
@@ -99,7 +95,7 @@ def main(args):
     model = get_model_options(args.dataset)[args.model]
 
     # ======= Create Server ========
-    server = serverdlg.ServerDLG(global_model=model(n_classes), momentum=args.server_momentum, device=args.device, data_size=shape_img, label_size=label_size)
+    server = server_with_data.ServerGRNN(global_model=model(n_classes), momentum=args.server_momentum, device=args.device, num_classes=num_class, train_loader=train_loaders[-1],valid_loader=valid_loaders[-1],test_loader=test_loaders[-1], img_shape=shape_img)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
@@ -132,7 +128,7 @@ def main(args):
 
 
         ##attack
-        reconstruct_data, reconstruct_label = server.attack(method=args.attack)
+        reconstruct_data, reconstruct_label = server.GRNNattack()
         history.append(reconstruct_data.clone().detach())
 
         server.federated_averaging()
@@ -157,7 +153,7 @@ def main(args):
     path = r'D:\leakage-attack-in-federated-learning\saved_results'
     if not os.path.exists(path):
         os.makedirs(path)
-    plt.savefig(os.path.join(path, args.attack + args.dataset + '_fake_image.png'))
+    plt.savefig(os.path.join(path, 'GRNN' + args.dataset + '_fake_image.png'))
 
     # reconstruct_data = reconstruct_data.detach()
     # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)
@@ -201,12 +197,12 @@ if __name__ == '__main__':
 
     parser.add_argument('--server_momentum', default=0., type=float, help='learning momentum on server')
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
-    parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
+    parser.add_argument('--model', default='resnet18', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')
@@ -218,7 +214,6 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0', help='device')
     parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
 
-    parser.add_argument('--attack', default='DLG', help='the attack type')
 
     args = parser.parse_args()
     print('\n============== Federated Learning Setting ==============')
@@ -226,4 +221,3 @@ if __name__ == '__main__':
     print('============== Federated Learning Setting ==============\n')
 
     main(args)
-
