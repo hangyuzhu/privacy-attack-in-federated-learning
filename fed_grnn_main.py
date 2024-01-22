@@ -128,32 +128,14 @@ def main(args):
 
 
         ##attack
-        reconstruct_data, reconstruct_label = server.GRNNattack()
-        history.append(reconstruct_data.clone().detach())
+        server.GRNNattack()
+
 
         server.federated_averaging()
         duration_time = time.time() - start_time
         print('One communication round training time: %.4fs' % duration_time)
 
-    ## show reconstructions
-    if args.dataset == 'mnist':
-        for i, _recon in enumerate(history):
-            plt.subplot(10, 10, i + 1)
-            _recon.mul(255).add_(0.5).clamp_(0, 255)
-            _recon = _recon.to(dtype=torch.uint8)
-            plt.imshow(_recon[0].permute(1, 2, 0).cpu(), cmap='gray')
-            plt.axis('off')
-    else:
-        for i, _recon in enumerate(history):
-            _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
-            _recon = _recon.to(dtype=torch.float32)
-            plt.subplot(10, 10, i + 1)
-            plt.imshow(_recon[0].permute(1, 2, 0).cpu())
-            plt.axis('off')
-    path = r'D:\leakage-attack-in-federated-learning\saved_results'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    plt.savefig(os.path.join(path, 'GRNN' + args.dataset + '_fake_image.png'))
+
 
     # reconstruct_data = reconstruct_data.detach()
     # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)
@@ -202,7 +184,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='cifar100', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')

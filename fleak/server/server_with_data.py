@@ -77,5 +77,5 @@ class ServerGRNN(Server):
         self.cur_round += 1
 
     def GRNNattack(self):
-        reconstruct_data, reconstruct_label = GRNN.Reconstruction(self.num_classes,self.global_model, self.img_shape, self.train_loader)
-        return reconstruct_data,reconstruct_label
+        # GRNN.Reconstruction(self.num_classes, self.global_model, self.img_shape, self.updates[0][-1])
+        GRNN.Reconstruction(self.num_classes,self.global_model, self.img_shape, self.train_loader)
