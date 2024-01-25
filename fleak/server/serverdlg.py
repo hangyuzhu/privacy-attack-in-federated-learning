@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from .server import Server
 from fleak.attack.idlg import reconstruct_dlg,reconstruct_idlg
-from fleak.attack.inverting_gradients import invertinggradients
+from fleak.attack.inverting import recontstruction
 from fleak.model.gan_network import MnistGenerator
 from fleak.attack.GGL import GGLreconstruction
 device = "cuda" if torch.cuda.is_available() else "CPU"
@@ -82,7 +82,7 @@ class ServerDLG(Server):
         elif method == "iDLG":
             reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         elif method == "inverting-gradient":
-            reconstruct_data,reconstruct_label = invertinggradients(self.updates[0][-1], self.global_model, self.dummy_data)
+            reconstruct_data,reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],self.dummy_data)
         elif method == "GGL":
             path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
             generator = MnistGenerator().to(device)
