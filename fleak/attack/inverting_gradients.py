@@ -290,7 +290,7 @@ class GradientReconstructor():
             if self.num_images == 1 and self.iDLG:
                 # iDLG trick:
                 # last_weight_min = torch.argmin(torch.sum(input_data[-2], dim=-1), dim=-1)
-                last_weight_min = torch.argmin(torch.sum(shared_gradients[-1], dim=-1), dim=-1)
+                last_weight_min = torch.argmin(torch.sum(list(shared_gradients.values())[-4]), dim=-1)
                 labels = last_weight_min.detach().reshape((1,)).requires_grad_(False)
                 self.reconstruct_label = False
             else:

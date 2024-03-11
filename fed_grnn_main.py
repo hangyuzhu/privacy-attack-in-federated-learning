@@ -177,6 +177,7 @@ if __name__ == '__main__':
     # for fedper
     parser.add_argument('--num_shared_layers', default=-1, type=int, help='number of shared layers for fedper')
 
+
     parser.add_argument('--server_momentum', default=0., type=float, help='learning momentum on server')
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
     parser.add_argument('--model', default='resnet18', type=str, choices=MODELS, help='Training model')
@@ -184,7 +185,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='cifar100', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')

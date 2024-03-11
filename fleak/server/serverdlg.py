@@ -51,12 +51,14 @@ class ServerDLG(Server):
             eval_correct += eval_cor
             eval_total += eval_tot
             # train and update client model
-            c_id, num_samples, update = c.train()
+            c_id, num_samples, update, data_grads= c.train()
+
+
 
             # convert to gradients
             grads = self.comp_grads(update)
             # update client round
-            self.updates.append((c_id, num_samples, update, grads))
+            self.updates.append((c_id, num_samples, update,  grads, data_grads))
         eval_accuracy = eval_correct / eval_total
         print('Round %d: ' % self.cur_round + set_to_use + ' accuracy %.4f' % eval_accuracy)
         # update communication round
@@ -80,7 +82,7 @@ class ServerDLG(Server):
         if method == "DLG":
             reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         elif method == "iDLG":
-            reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+            reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.25)
         elif method == "inverting-gradient":
             reconstruct_data,reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],self.dummy_data)
         elif method == "GGL":
