@@ -15,7 +15,6 @@ from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
 from fleak.data.partition import partition_dataset
 from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
-from fleak.attack.idlg import reconstruct_dlg
 
 
 
@@ -35,7 +34,6 @@ def main(args):
     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
         partition_dataset(dataset=args.dataset,
                           data_dir=data_dir,
-                          # data_augment=False,
                           data_augment=True,
                           iid=args.iid,
                           n_parties=args.total_clients,
@@ -132,9 +130,10 @@ def main(args):
 
 
         ##attack
-        reconstruct_data, reconstruct_label = server.attack(method=args.attack)
-        history.append(reconstruct_data.clone().detach())
+        # reconstruct_data, reconstruct_label = server.random_attack(method=args.attack)
+        # history.append(reconstruct_data.clone().detach())
 
+        """before or after ?"""
         server.federated_averaging()
         duration_time = time.time() - start_time
         print('One communication round training time: %.4fs' % duration_time)

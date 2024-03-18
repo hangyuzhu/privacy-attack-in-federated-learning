@@ -9,7 +9,6 @@ from fleak.attack.idlg import reconstruct_dlg,reconstruct_idlg
 from fleak.attack.inverting import recontstruction
 from fleak.model.gan_network import MnistGenerator
 from fleak.attack.GGL import GGLreconstruction
-device = "cuda" if torch.cuda.is_available() else "CPU"
 
 
 class ServerDLG(Server):
@@ -78,16 +77,23 @@ class ServerDLG(Server):
         # update communication round
         self.cur_round += 1
 
-    def attack(self, method="DLG"):
+    def random_attack(self, method="DLG"):
+        """
+        Randomly select a client to attack from scratch
+        :param method: attack method
+        :return: reconstructed data and labels
+        """
+        reconstruct_label = None
         if method == "DLG":
-            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+            reconstruct_data = reconstruct_dlg(
+                self.global_model, self.updates[0][-1], self.dummy_data, self.dummy_labels, 300, self.device)
         elif method == "iDLG":
             reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.25)
         elif method == "inverting-gradient":
             reconstruct_data,reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],self.dummy_data)
         elif method == "GGL":
             path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
-            generator = MnistGenerator().to(device)
+            generator = MnistGenerator().to(self.device)
             generator.load_state_dict(torch.load(path)['state_dict'])
             generator.eval()
             reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator, self.updates[0][-1])
@@ -98,20 +104,47 @@ class ServerDLG(Server):
             reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         return reconstruct_data, reconstruct_label
 
+    def fixed_attack(self, method="DLG"):
+        # attack the first client
+        for update in self.updates:
+            if update[0] == 0:
+                local_grads = update[-1]
+                if method == "DLG":
+                    self.dummy_data = reconstruct_dlg(
+                        self.global_model, local_grads, self.dummy_data, self.dummy_labels, 300, self.device)
+                elif method == "iDLG":
+                    reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data,
+                                                                           self.dummy_labels, self.global_model, 300,
+                                                                           0.25)
+                elif method == "inverting-gradient":
+                    reconstruct_data, reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],
+                                                                          self.dummy_data)
+                elif method == "GGL":
+                    path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
+                    generator = MnistGenerator().to(self.device)
+                    generator.load_state_dict(torch.load(path)['state_dict'])
+                    generator.eval()
+                    reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator,
+                                                                            self.updates[0][-1])
+                    # noise = torch.randn(1, 100).to(device)
+                    # dummy_data = generator(noise).detach()
+                    # reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+                elif method == "GRNN":
+                    reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data,
+                                                                          self.dummy_labels, self.global_model, 300,
+                                                                          0.001)
+                break
 
-    # def federated_averaging(self):
-    #     total_samples = np.sum([update[1] for update in self.updates])
-    #     averaged_soln = copy.deepcopy(self.updates[0][2])
-    #     for key in self.global_model.state_dict().keys():
-    #         if 'num_batches_tracked' in key:
-    #             continue
-    #         for i in range(len(self.updates)):
-    #             if i == 0:
-    #                 averaged_soln[key] = averaged_soln[key] * self.updates[i][1] / total_samples
-    #             else:
-    #                 averaged_soln[key] += self.updates[i][2][key] * self.updates[i][1] / total_samples
-    #     self.accumulate_momentum(averaged_soln)
-    #     # update global model
-    #     self.global_model.load_state_dict(averaged_soln)
-    #     # clear uploads buffer
-    #     self.updates = []
+    def federated_averaging(self):
+        total_samples = np.sum([update[1] for update in self.updates])
+        averaged_soln = copy.deepcopy(self.global_model.state_dict())
+        for key in self.global_model.state_dict().keys():
+            if 'num_batches_tracked' in key:
+                continue
+            for i in range(len(self.updates)):
+                averaged_soln[key] -= self.updates[i][2][key] * self.updates[i][1] / total_samples
+        self.accumulate_momentum(averaged_soln)
+        # update global model
+        self.global_model.load_state_dict(averaged_soln)
+        # clear uploads buffer
+        self.updates = []
