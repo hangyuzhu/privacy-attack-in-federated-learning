@@ -34,7 +34,7 @@ def main(args):
     combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
         partition_dataset(dataset=args.dataset,
                           data_dir=data_dir,
-                          data_augment=True,
+                          data_augment=False,
                           iid=args.iid,
                           n_parties=args.total_clients,
                           valid_prop=args.valid_prop,
@@ -129,9 +129,9 @@ def main(args):
             eval_accuracy.append(eval_acc)
 
 
-        ##attack
-        # reconstruct_data, reconstruct_label = server.random_attack(method=args.attack)
-        # history.append(reconstruct_data.clone().detach())
+        #attack
+        reconstruct_data, reconstruct_label = server.random_attack(method=args.attack)
+        history.append(reconstruct_data.clone().detach())
 
         """before or after ?"""
         server.federated_averaging()
@@ -153,7 +153,7 @@ def main(args):
             plt.subplot(10, 10, i + 1)
             plt.imshow(_recon[0].permute(1, 2, 0).cpu())
             plt.axis('off')
-    path = r'D:\leakage-attack-in-federated-learning\saved_results'
+    path = r'saved_results'
     if not os.path.exists(path):
         os.makedirs(path)
     plt.savefig(os.path.join(path, args.attack + args.dataset + '_fake_image.png'))
@@ -171,10 +171,10 @@ def main(args):
     eval_accuracy.append(eval_acc)
 
 
-
 def online(clients):
     """We assume all users are always online."""
     return clients
+
 
 if __name__ == '__main__':
     import argparse

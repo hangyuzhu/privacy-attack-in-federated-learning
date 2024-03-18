@@ -5,7 +5,7 @@ from collections import OrderedDict
 import matplotlib.pyplot as plt
 
 from .server import Server
-from fleak.attack.idlg import reconstruct_dlg,reconstruct_idlg
+from fleak.attack.idlg import dlg,idlg
 from fleak.attack.inverting import recontstruction
 from fleak.model.gan_network import MnistGenerator
 from fleak.attack.GGL import GGLreconstruction
@@ -83,12 +83,14 @@ class ServerDLG(Server):
         :param method: attack method
         :return: reconstructed data and labels
         """
+        reconstruct_data = None
         reconstruct_label = None
         if method == "DLG":
-            reconstruct_data = reconstruct_dlg(
+            reconstruct_data = dlg(
                 self.global_model, self.updates[0][-1], self.dummy_data, self.dummy_labels, 300, self.device)
         elif method == "iDLG":
-            reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.25)
+            reconstruct_data, reconstruct_label = idlg(
+                self.global_model, self.updates[0][-1], self.dummy_data, 300, 0.25)
         elif method == "inverting-gradient":
             reconstruct_data,reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],self.dummy_data)
         elif method == "GGL":
@@ -101,7 +103,7 @@ class ServerDLG(Server):
             # dummy_data = generator(noise).detach()
             # reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         elif method == "GRNN":
-            reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+            reconstruct_data, reconstruct_label = dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         return reconstruct_data, reconstruct_label
 
     def fixed_attack(self, method="DLG"):
@@ -110,12 +112,12 @@ class ServerDLG(Server):
             if update[0] == 0:
                 local_grads = update[-1]
                 if method == "DLG":
-                    self.dummy_data = reconstruct_dlg(
+                    self.dummy_data = dlg(
                         self.global_model, local_grads, self.dummy_data, self.dummy_labels, 300, self.device)
                 elif method == "iDLG":
-                    reconstruct_data, reconstruct_label = reconstruct_idlg(self.updates[0][-1], self.dummy_data,
-                                                                           self.dummy_labels, self.global_model, 300,
-                                                                           0.25)
+                    reconstruct_data, reconstruct_label = idlg(self.updates[0][-1], self.dummy_data,
+                                                               self.dummy_labels, self.global_model, 300,
+                                                               0.25)
                 elif method == "inverting-gradient":
                     reconstruct_data, reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],
                                                                           self.dummy_data)
@@ -130,9 +132,9 @@ class ServerDLG(Server):
                     # dummy_data = generator(noise).detach()
                     # reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
                 elif method == "GRNN":
-                    reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], self.dummy_data,
-                                                                          self.dummy_labels, self.global_model, 300,
-                                                                          0.001)
+                    reconstruct_data, reconstruct_label = dlg(self.updates[0][-1], self.dummy_data,
+                                                              self.dummy_labels, self.global_model, 300,
+                                                              0.001)
                 break
 
     def federated_averaging(self):
@@ -142,6 +144,7 @@ class ServerDLG(Server):
             if 'num_batches_tracked' in key:
                 continue
             for i in range(len(self.updates)):
+                # global model minus averaged gradients
                 averaged_soln[key] -= self.updates[i][2][key] * self.updates[i][1] / total_samples
         self.accumulate_momentum(averaged_soln)
         # update global model
