@@ -84,19 +84,19 @@ class ServerDLG(Server):
         """
         reconstruct_data = None
         reconstruct_label = None
+
+        local_grads = self.comp_grads(self.updates[0][-1])
+        # update global model
+        self.global_model.load_state_dict(self.updates[0][-1])
+
         if method == "DLG":
-            # update global model
-            local_grads = self.comp_grads(self.updates[0][-1])
-            self.global_model.load_state_dict(self.updates[0][-1])
             reconstruct_data = dlg(
                 self.global_model, local_grads, self.dummy_data, self.dummy_labels, 300, 1., self.device)
         elif method == "iDLG":
-            local_grads = self.comp_grads(self.updates[0][-1])
-            self.global_model.load_state_dict(self.updates[0][-1])
             reconstruct_data, reconstruct_label = idlg(
                 self.global_model, local_grads, self.dummy_data, 300, 0.25)
         elif method == "inverting-gradient":
-            reconstruct_data, reconstruct_label = ig(self.global_model, self.updates[0][-1], self.dummy_data)
+            reconstruct_data, reconstruct_label = ig(self.global_model, local_grads, self.device)
         elif method == "GGL":
             path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
             generator = MnistGenerator().to(self.device)
