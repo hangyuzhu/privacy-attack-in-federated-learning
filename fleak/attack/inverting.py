@@ -12,10 +12,11 @@ dm = torch.as_tensor([0.4915, 0.4823, 0.4468], device="cuda" if torch.cuda.is_av
 ds = torch.as_tensor([0.2470, 0.2435, 0.2616], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]
 
 
-def recontstruction(global_model, shared_gradient,dummy_data):
+def ig(global_model, shared_gradient, dummy_data):
+    # https://proceedings.neurips.cc/paper/2020/file/c4ede56bbd98819ae6112b20ac6bf145-Paper.pdf
     global_model.zero_grad()
     generate_data = dummy_data.detach()
-    label_pred = torch.argmin(torch.sum(list(shared_gradient.values())[-4])).detach().reshape((1,))
+    label_pred = torch.argmin(torch.sum(list(shared_gradient.values())[-2])).detach().reshape((1,))
     config = dict(signed=True,
                   boxed=True,
                   cost_fn='sim',

@@ -10,7 +10,7 @@ def criterion(pred, target):
     return torch.mean(torch.sum(- target * F.log_softmax(pred, dim=-1), 1))
 
 
-def dlg(global_model, local_grads, dummy_data, dummy_label, epochs, device):
+def dlg(global_model, local_grads, dummy_data, dummy_label, epochs, lr=1.0, device="cpu"):
     """
     https://proceedings.neurips.cc/paper/2019/file/60a6c4002cc7b29142def8871531281a-Paper.pdf
     :param global_model: global model
@@ -22,7 +22,7 @@ def dlg(global_model, local_grads, dummy_data, dummy_label, epochs, device):
     :return: dummy data
     """
     global_model.eval()
-    optimizer = torch.optim.LBFGS([dummy_data])
+    optimizer = torch.optim.LBFGS([dummy_data], lr=lr)
 
     # gradient closure
     minimal_value_so_far = torch.as_tensor(float("inf"), device=device, dtype=torch.float32)
@@ -60,15 +60,12 @@ def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cp
     :param device: cpu or cuda
     :return: dummy data
     """
+    global_model.eval()
     optimizer = torch.optim.Adam([dummy_data], lr=lr)
     minimal_value_so_far = torch.as_tensor(float("inf"), device=device, dtype=torch.float32)
-    # label_pred = torch.argmin(torch.sum(origin_gradients, dim=-1), dim=-1).detach().reshape((1,)).requires_grad(False)
-    ##  use the gradients of FC1 to recover the ground-truth label(but has an error: TypeError: 'bool' object is not callable)
-
-    # label_pred = torch.argmin(torch.sum(list(local_grads.values())[-4])).detach().reshape((1,))
     label_pred = torch.argmin(torch.sum(list(local_grads.values())[-2])).detach().reshape((1,))
-    # label_pred = torch.argmin(torch.sum(torch.Tensor(origin_gradients[-4]))).detach().reshape((1,))
     criterion_idlg = nn.CrossEntropyLoss().to(device)
+
     for iters in range(epochs):
         def closure():
             optimizer.zero_grad()
@@ -78,7 +75,6 @@ def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cp
             dummy_dy_dx = torch.autograd.grad(dummy_loss, global_model.parameters(), create_graph=True)
             grad_diff = 0
             for dummy_g, origin_g in zip(dummy_dy_dx, local_grads.values()):
-            # for dummy_g, origin_g in zip(dummy_dy_dx, shared_gradients):
                 grad_diff += ((dummy_g - origin_g) ** 2).sum()
             grad_diff.backward()
             return grad_diff
@@ -88,11 +84,4 @@ def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cp
             if objective_value < minimal_value_so_far:
                 minimal_value_so_far = objective_value.detach()
                 best_dummy_data = dummy_data.detach().clone()
-                # best_dummy_label = dummy_label.detach().clone()
-
-        # if iters % 10 == 0:
-        #     current_loss = closure()
-        #     print(iters, "%.4f" % current_loss.item())
-
-    # return dummy_data, label_pred
     return best_dummy_data, label_pred

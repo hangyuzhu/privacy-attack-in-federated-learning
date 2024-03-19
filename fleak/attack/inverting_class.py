@@ -1,10 +1,10 @@
 import torch
 from copy import deepcopy
 import time
-from collections import defaultdict,OrderedDict
+from collections import defaultdict, OrderedDict
 
-from .metrics import InceptionScore,total_variation
-from .utils import label_to_onehot,MedianPool2d
+from .metrics import InceptionScore, total_variation
+from .utils import label_to_onehot, MedianPool2d
 from .modules import MetaMonkey
 
 
@@ -24,6 +24,7 @@ DEFAULT_CONFIG = dict(signed=False,
                       lr_decay=True,
                       scoring_choice='loss')
 
+
 def _validate_config(config):
     for key in DEFAULT_CONFIG.keys():
         if config.get(key) is None:
@@ -34,12 +35,11 @@ def _validate_config(config):
     return config
 
 
-
-class GradientReconstructor():
-    def __init__(self,model,mean_std=(0.5,0.5),config=DEFAULT_CONFIG,num_images=1):
+class GradientReconstructor:
+    def __init__(self, model, mean_std=(0.5, 0.5), config=DEFAULT_CONFIG, num_images=1):
         self.config = _validate_config(config)
         self.model = model
-        self.setup = dict(device=device,dtype=next(model.parameters()).dtype)
+        self.setup = dict(device=device, dtype=next(model.parameters()).dtype)
 
         self.mean_std = mean_std
         self.num_images = num_images

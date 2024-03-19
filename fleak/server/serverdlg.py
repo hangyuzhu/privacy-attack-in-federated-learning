@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from .server import Server
 from fleak.attack.idlg import dlg,idlg
-from fleak.attack.inverting import recontstruction
+from fleak.attack.inverting import ig
 from fleak.model.gan_network import MnistGenerator
 from fleak.attack.GGL import GGLreconstruction
 
@@ -87,12 +87,12 @@ class ServerDLG(Server):
         reconstruct_label = None
         if method == "DLG":
             reconstruct_data = dlg(
-                self.global_model, self.updates[0][-1], self.dummy_data, self.dummy_labels, 300, self.device)
+                self.global_model, self.updates[0][-1], self.dummy_data, self.dummy_labels, 300, 1., self.device)
         elif method == "iDLG":
             reconstruct_data, reconstruct_label = idlg(
                 self.global_model, self.updates[0][-1], self.dummy_data, 300, 0.25)
         elif method == "inverting-gradient":
-            reconstruct_data,reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],self.dummy_data)
+            reconstruct_data, reconstruct_label = ig(self.global_model, self.updates[0][-1], self.dummy_data)
         elif method == "GGL":
             path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
             generator = MnistGenerator().to(self.device)
@@ -113,14 +113,14 @@ class ServerDLG(Server):
                 local_grads = update[-1]
                 if method == "DLG":
                     self.dummy_data = dlg(
-                        self.global_model, local_grads, self.dummy_data, self.dummy_labels, 300, self.device)
+                        self.global_model, local_grads, self.dummy_data, self.dummy_labels, 300, 1., self.device)
                 elif method == "iDLG":
                     reconstruct_data, reconstruct_label = idlg(self.updates[0][-1], self.dummy_data,
                                                                self.dummy_labels, self.global_model, 300,
                                                                0.25)
                 elif method == "inverting-gradient":
-                    reconstruct_data, reconstruct_label = recontstruction(self.global_model, self.updates[0][-1],
-                                                                          self.dummy_data)
+                    reconstruct_data, reconstruct_label = ig(self.global_model, self.updates[0][-1],
+                                                             self.dummy_data)
                 elif method == "GGL":
                     path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
                     generator = MnistGenerator().to(self.device)
