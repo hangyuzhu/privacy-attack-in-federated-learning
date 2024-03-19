@@ -3,6 +3,7 @@ import torchvision
 
 from collections import defaultdict
 
+
 class InceptionScore(torch.nn.Module):
     """Class that manages and returns the inception score of images."""
 

@@ -39,30 +39,29 @@ class ServerDLG(Server):
             # grads[key].requires_grad = False
         return grads
 
-    def train_eval(self, clients=None, set_to_use='test'):
-        if clients is None:
-            clients = self.selected_clients
-        eval_correct = 0
-        eval_total = 0
-        for c in clients:
-            c.synchronize(self.cur_round, self.global_model.state_dict())
-            eval_cor, eval_tot = c.evaluate(set_to_use=set_to_use)
-            eval_correct += eval_cor
-            eval_total += eval_tot
-            # train and update client model
-            c_id, num_samples, update = c.train()
-
-
-
-            # convert to gradients
-            grads = self.comp_grads(update)
-            # update client round
-            self.updates.append((c_id, num_samples, grads))
-        eval_accuracy = eval_correct / eval_total
-        print('Round %d: ' % self.cur_round + set_to_use + ' accuracy %.4f' % eval_accuracy)
-        # update communication round
-        self.cur_round += 1
-        return eval_accuracy
+    # def train_eval(self, clients=None, set_to_use='test'):
+    #     if clients is None:
+    #         clients = self.selected_clients
+    #     eval_correct = 0
+    #     eval_total = 0
+    #     for c in clients:
+    #         c.synchronize(self.cur_round, self.global_model.state_dict())
+    #         eval_cor, eval_tot = c.evaluate(set_to_use=set_to_use)
+    #         eval_correct += eval_cor
+    #         eval_total += eval_tot
+    #         # train and update client model
+    #         c_id, num_samples, update = c.train()
+    #
+    #         # convert to gradients
+    #         # grads = self.comp_grads(update)
+    #         # update client round
+    #         # self.updates.append((c_id, num_samples, grads))
+    #         self.updates.append((c_id, num_samples, update))
+    #     eval_accuracy = eval_correct / eval_total
+    #     print('Round %d: ' % self.cur_round + set_to_use + ' accuracy %.4f' % eval_accuracy)
+    #     # update communication round
+    #     self.cur_round += 1
+    #     return eval_accuracy
 
     def train(self, clients=None):
         # just for training
@@ -86,11 +85,16 @@ class ServerDLG(Server):
         reconstruct_data = None
         reconstruct_label = None
         if method == "DLG":
+            # update global model
+            local_grads = self.comp_grads(self.updates[0][-1])
+            self.global_model.load_state_dict(self.updates[0][-1])
             reconstruct_data = dlg(
-                self.global_model, self.updates[0][-1], self.dummy_data, self.dummy_labels, 300, 1., self.device)
+                self.global_model, local_grads, self.dummy_data, self.dummy_labels, 300, 1., self.device)
         elif method == "iDLG":
+            local_grads = self.comp_grads(self.updates[0][-1])
+            self.global_model.load_state_dict(self.updates[0][-1])
             reconstruct_data, reconstruct_label = idlg(
-                self.global_model, self.updates[0][-1], self.dummy_data, 300, 0.25)
+                self.global_model, local_grads, self.dummy_data, 300, 0.25)
         elif method == "inverting-gradient":
             reconstruct_data, reconstruct_label = ig(self.global_model, self.updates[0][-1], self.dummy_data)
         elif method == "GGL":
@@ -137,17 +141,17 @@ class ServerDLG(Server):
                                                               0.001)
                 break
 
-    def federated_averaging(self):
-        total_samples = np.sum([update[1] for update in self.updates])
-        averaged_soln = copy.deepcopy(self.global_model.state_dict())
-        for key in self.global_model.state_dict().keys():
-            if 'num_batches_tracked' in key:
-                continue
-            for i in range(len(self.updates)):
-                # global model minus averaged gradients
-                averaged_soln[key] -= self.updates[i][2][key] * self.updates[i][1] / total_samples
-        self.accumulate_momentum(averaged_soln)
-        # update global model
-        self.global_model.load_state_dict(averaged_soln)
-        # clear uploads buffer
-        self.updates = []
+    # def federated_averaging(self):
+    #     total_samples = np.sum([update[1] for update in self.updates])
+    #     averaged_soln = copy.deepcopy(self.global_model.state_dict())
+    #     for key in self.global_model.state_dict().keys():
+    #         if 'num_batches_tracked' in key:
+    #             continue
+    #         for i in range(len(self.updates)):
+    #             # global model minus averaged gradients
+    #             averaged_soln[key] -= self.updates[i][2][key] * self.updates[i][1] / total_samples
+    #     self.accumulate_momentum(averaged_soln)
+    #     # update global model
+    #     self.global_model.load_state_dict(averaged_soln)
+    #     # clear uploads buffer
+    #     self.updates = []

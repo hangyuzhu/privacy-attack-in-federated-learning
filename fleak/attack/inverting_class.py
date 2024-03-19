@@ -38,7 +38,7 @@ def _validate_config(config):
 class GradientReconstructor:
     def __init__(self, model, mean_std=(0.5, 0.5), config=DEFAULT_CONFIG, num_images=1):
         self.config = _validate_config(config)
-        self.model = model
+        self.model = model    # global model
         self.setup = dict(device=device, dtype=next(model.parameters()).dtype)
 
         self.mean_std = mean_std
@@ -57,14 +57,14 @@ class GradientReconstructor:
             self.model.eval()
 
         stats = defaultdict(list)
-        dummy_data = torch.randn((self.config['restarts'], self.num_images, *img_shape), **self.setup)
+        dummy_data = torch.randn((self.config['restarts'], self.num_images, *img_shape), **self.setup) # 32, 1, 3,32,32
         scores = torch.zeros(self.config['restarts'])
 
 
         assert labels.shape[0] == self.num_images
 
         try:
-            for trial in range(self.config['restarts']):
+            for trial in range(self.config['restarts']):  # 32
                 x_trial, labels = self._run_trial(dummy_data[trial], input_data, labels, dryrun=dryrun)
                 # Finalize
                 scores[trial] = self._score_trial(x_trial, input_data, labels)
@@ -94,7 +94,7 @@ class GradientReconstructor:
 
     def _run_trial(self, x_trial, input_data, labels, dryrun=False):
         x_trial.requires_grad = True
-        if self.config['optim'] == 'adam':
+        if self.config['optim'] == 'adam':   # adam
             optimizer = torch.optim.Adam([x_trial], lr=self.config['lr'])
         elif self.config['optim'] == 'sgd':  # actually gd
             optimizer = torch.optim.SGD([x_trial], lr=0.01, momentum=0.9, nesterov=True)
@@ -111,7 +111,7 @@ class GradientReconstructor:
 
                                                                          max_iterations // 1.142], gamma=0.1)   # 3/8 5/8 7/8
         try:
-            for iteration in range(max_iterations):
+            for iteration in range(max_iterations):  # 1000
                 closure = self._gradient_closure(optimizer, x_trial, input_data, labels)
                 rec_loss = optimizer.step(closure)
                 if self.config['lr_decay']:
