@@ -198,6 +198,53 @@ class GradientReconstructor:
         return x_optimal, stats
 
 
+class FedAvgReconstructor(GradientReconstructor):
+    """Reconstruct an image from weights after n gradient descent steps."""
+
+    def __init__(self, model, mean_std=(0.0, 1.0), local_steps=2, local_lr=1e-4,
+                 config=DEFAULT_CONFIG, num_images=1, use_updates=True, batch_size=0,device="cpu"):
+        """Initialize with model, (mean, std) and config."""
+        super().__init__(model, mean_std, config, num_images,device)
+        self.local_steps = local_steps
+        self.local_lr = local_lr
+        self.use_updates = use_updates
+        self.batch_size = batch_size
+
+    def _gradient_closure(self, optimizer, x_trial, input_parameters, labels):
+        def closure():
+            optimizer.zero_grad()
+            self.model.zero_grad()
+            parameters = loss_steps(self.model, x_trial, labels, loss_fn=self.loss_fn,
+                                    local_steps=self.local_steps, lr=self.local_lr,
+                                    use_updates=self.use_updates,
+                                    batch_size=self.batch_size)
+            rec_loss = reconstruction_costs([parameters], input_parameters,
+                                            cost_fn=self.config['cost_fn'], indices=self.config['indices'],
+                                            weights=self.config['weights'])
+
+            if self.config['total_variation'] > 0:
+                rec_loss += self.config['total_variation'] * total_variation(x_trial)
+            rec_loss.backward()
+            if self.config['signed']:
+                x_trial.grad.sign_()
+            return rec_loss
+        return closure
+
+    def _score_trial(self, x_trial, input_parameters, labels):
+        if self.config['scoring_choice'] == 'loss':
+            self.model.zero_grad()
+            parameters = loss_steps(self.model, x_trial, labels, loss_fn=self.loss_fn,
+                                    local_steps=self.local_steps, lr=self.local_lr, use_updates=self.use_updates)
+            return reconstruction_costs([parameters], input_parameters,
+                                        cost_fn=self.config['cost_fn'], indices=self.config['indices'],
+                                        weights=self.config['weights'])
+        elif self.config['scoring_choice'] == 'tv':
+            return total_variation(x_trial)
+        elif self.config['scoring_choice'] == 'inception':
+            # We do not care about diversity here!
+            return self.inception(x_trial)
+
+
 def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
     """Take a few gradient descent steps to fit the model to the given input."""
     patched_model = MetaMonkey(model)
