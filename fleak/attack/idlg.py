@@ -63,7 +63,7 @@ def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cp
     global_model.eval()
     optimizer = torch.optim.Adam([dummy_data], lr=lr)
     minimal_value_so_far = torch.as_tensor(float("inf"), device=device, dtype=torch.float32)
-    label_pred = torch.argmin(torch.sum(list(local_grads.values())[-2])).detach().reshape((1,))
+    label_pred = torch.argmin(torch.sum(list(local_grads.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
     criterion_idlg = nn.CrossEntropyLoss().to(device)
 
     for iters in range(epochs):

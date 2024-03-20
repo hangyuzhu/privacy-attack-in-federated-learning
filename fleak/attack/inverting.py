@@ -19,7 +19,7 @@ def ig(local_model, local_gradients, device="cpu"):
     # --------------------------------------------------
     # generate_data = dummy_data.detach()
     # --------------------------------------------------
-    label_pred = torch.argmin(torch.sum(list(local_gradients.values())[-2])).detach().reshape((1,))
+    label_pred = torch.argmin(torch.sum(list(local_gradients.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
     config = dict(signed=True,
                   boxed=True,
                   cost_fn='sim',
@@ -39,11 +39,10 @@ def ig(local_model, local_gradients, device="cpu"):
     return output, label_pred
 
 
-
 def ig_weight(local_model, local_gradients, device="cpu"):
     dm = torch.as_tensor([0.4914, 0.4822, 0.4465], device=device, dtype=torch.float32)[None, :, None, None]
     ds = torch.as_tensor([0.2023, 0.1994, 0.2010], device=device, dtype=torch.float32)[None, :, None, None]
-    label_pred = torch.argmin(torch.sum(list(local_gradients.values())[-2])).detach().reshape((1,))
+    label_pred = torch.argmin(torch.sum(list(local_gradients.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
     local_model.zero_grad()
     config = dict(signed=True,
                   boxed=True,
@@ -53,7 +52,7 @@ def ig_weight(local_model, local_gradients, device="cpu"):
                   lr=0.1,
                   optim='adam',
                   restarts=1,
-                  max_iterations=1000,
+                  max_iterations=8000,
                   total_variation=1e-6,
                   init='randn',
                   filter='none',
