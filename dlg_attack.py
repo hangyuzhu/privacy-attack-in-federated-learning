@@ -156,7 +156,10 @@ def main(args):
     path = r'saved_results'
     if not os.path.exists(path):
         os.makedirs(path)
-    plt.savefig(os.path.join(path, args.attack + args.dataset + '_fake_image.png'))
+    if args.iid == True:
+        plt.savefig(os.path.join(path, args.attack + args.dataset + args.total_clients + args.num_epochs + args.batch_size + '_fake_image.png'))
+    else:
+        plt.savefig(os.path.join(path, args.attack + 'noniid' + args.dataset + args.total_clients + args.num_epochs + args.batch_size + '_fake_image.png'))
 
     # reconstruct_data = reconstruct_data.detach()
     # reconstruct_data.mul_(ds).add_(dm).clamp_(0, 1)

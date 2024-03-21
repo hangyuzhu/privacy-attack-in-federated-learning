@@ -58,6 +58,67 @@ class MnistDiscriminator(nn.Module):
         return x
 
 
+class Cifar10Generator(nn.Module):
+    def __init__(self):
+        super(Cifar10Generator, self).__init__()
+        self.linear = nn.Sequential(
+            nn.Linear(100, 4 * 4 * 256),   # 256 * 4 * 4
+            nn.BatchNorm1d(4 * 4 * 256),
+            nn.LeakyReLU()
+        )
+        self.conv2 = nn.Sequential(
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False),   # 128 * 8 * 8
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(),
+        )
+        self.conv3 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),   # 64 * 16 * 16
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU()
+        )
+        self.conv4 = nn.Sequential(
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),  # 3 * 32 * 32
+            nn.Tanh()
+        )
+
+    def forward(self, x):
+        x = self.linear(x)
+        x = x.view(-1, 256, 4, 4)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        return x
+
+
+
+class Cifar10Discriminator(nn.Module):
+    def __init__(self):
+        super(Cifar10Discriminator, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1),   # 64 * 16 * 16
+            nn.LeakyReLU(0.2),
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False),  # 128 * 8 * 8
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1,bias=False),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+        )
+        self.fc = nn.Linear(256 * 4 * 4, 11)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = x.view(-1, 256 * 4 * 4)
+        x = self.fc(x)
+        return x
+
+
 class Generator(nn.Module):
     def __init__(self, channel=3, z_hidden=100, g_hidden=64):
         super(Generator, self).__init__()

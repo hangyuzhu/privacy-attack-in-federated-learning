@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from .server import Server
 from fleak.attack.idlg import dlg, idlg
-from fleak.attack.inverting import ig, ig_weight
+from fleak.attack.inverting import ig, ig_weight, ig_multiple
 from fleak.model.gan_network import MnistGenerator
 from fleak.attack.GGL import GGLreconstruction
 
@@ -96,7 +96,7 @@ class ServerDLG(Server):
             reconstruct_data, reconstruct_label = idlg(
                 self.global_model, local_grads, self.dummy_data, 300, 0.25)
         elif method == "inverting-gradient":
-            reconstruct_data, reconstruct_label = ig_weight(self.global_model, local_grads, self.device)
+            reconstruct_data, reconstruct_label = ig_multiple(self.global_model, local_grads, self.device)
         elif method == "GGL":
             path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
             generator = MnistGenerator().to(self.device)

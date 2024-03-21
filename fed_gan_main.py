@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torch.nn as nn
 
-from fleak.model import MnistDiscriminator
+from fleak.model import MnistDiscriminator,Cifar10Discriminator
 
 from fleak.server import Server
 from fleak.client import Client, GanClient
@@ -66,7 +66,8 @@ def main(args):
             for i in range(args.total_clients)]
 
     # ======= Create Model ========
-    model = MnistDiscriminator
+    # model = MnistDiscriminator
+    model = Cifar10Discriminator
 
     # ======= Create Server ========
     server = Server(global_model=model(), momentum=args.server_momentum, device=args.device)
@@ -78,7 +79,7 @@ def main(args):
                                  client_model=model(),
                                  data_name=args.dataset,
                                  num_epochs=args.num_epochs,
-                                 gan_epochs=2,
+                                 gan_epochs=10,
                                  lr=args.lr,
                                  lr_decay=args.lr_decay,
                                  momentum=args.client_momentum,
@@ -175,7 +176,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')

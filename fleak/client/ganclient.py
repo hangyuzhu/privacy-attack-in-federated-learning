@@ -5,7 +5,7 @@ from ..utils.train_eval import evaluate
 from .client import Client
 from fleak.attack import GAN
 from ..utils.train_eval import train
-from ..model import MnistGenerator
+from ..model import MnistGenerator,Cifar10Generator
 
 
 class GanClient(Client):
@@ -37,7 +37,7 @@ class GanClient(Client):
             test_loader=test_loader,
             device=device
         )
-        self.generator = MnistGenerator().to(self.device)
+        self.generator = Cifar10Generator().to(self.device)
         # discriminator optimizer
         self.D_optimizer = optim.SGD(self.client_model.parameters(), lr=1e-3, weight_decay=1e-7)
         # generator optimizer
@@ -58,7 +58,7 @@ class GanClient(Client):
         for _ in range(self.gan_epochs):
             GAN.attack(discriminator=self.client_model, generator=self.generator, device=self.device,
                        dataloader=self.train_loader, D_optimizer=self.D_optimizer, G_optimizer=self.G_optimizer,
-                       criterion=self.criterion, tracked_class=3, noise_dim=self.noise_dim)
+                       criterion=self.criterion, tracked_class=2, noise_dim=self.noise_dim)
         # if verbose and (self.cur_round + 1) % 50 == 0:
         GAN.generate_save_images(self.generator, self.fixed_noise, 'saved_results', self.data_name)
         for local_epoch in range(self.num_epochs):
