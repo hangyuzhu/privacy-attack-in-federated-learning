@@ -96,7 +96,7 @@ class ServerDLG(Server):
             reconstruct_data, reconstruct_label = idlg(
                 self.global_model, local_grads, self.dummy_data, 300, 0.25)
         elif method == "inverting-gradient":
-            reconstruct_data, reconstruct_label = ig_multiple(self.global_model, local_grads, self.device)
+            reconstruct_data, reconstruct_label = ig_weight(self.global_model, local_grads, self.device)
         elif method == "GGL":
             path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
             generator = MnistGenerator().to(self.device)
