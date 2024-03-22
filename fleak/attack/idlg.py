@@ -85,3 +85,20 @@ def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cp
                 minimal_value_so_far = objective_value.detach()
                 best_dummy_data = dummy_data.detach().clone()
     return best_dummy_data, label_pred
+
+
+if __name__ == "__main__":
+    x = torch.tensor(5.)
+    x.requires_grad = True
+    w = torch.tensor(3.)
+    w.requires_grad = True
+    # y = x**3
+
+    z = x*w
+    dw = torch.autograd.grad(z, w, retain_graph=True)
+    # z.backward()
+    # print(w.grad)
+    l = (dw[0] - 1) ** 2
+    l.backward()
+    print(x.grad)
+
