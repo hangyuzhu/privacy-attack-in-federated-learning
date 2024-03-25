@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from .server import Server
 from fleak.attack.idlg import dlg, idlg
 from fleak.attack.inverting import ig, ig_weight, ig_multiple
+from fleak.attack.robbing_the_fed import r_b_f
 from fleak.model.gan_network import MnistGenerator
 from fleak.attack.GGL import GGLreconstruction
 
@@ -20,7 +21,8 @@ class ServerDLG(Server):
                  momentum=0.0,
                  data_size=None,
                  label_size=None,
-                 device=None):
+                 secrets = None,
+                 device=None,):
         super(ServerDLG, self).__init__(server_id=server_id,
                                         server_group=server_group,
                                         global_model=global_model,
@@ -28,6 +30,7 @@ class ServerDLG(Server):
                                         device=device)
         self.data_size = data_size
         self.label_size = label_size
+        self.secrets = secrets
         self.dummy_data = torch.randn(data_size).to(device).requires_grad_(True)
         self.dummy_labels = torch.randn(label_size).to(device).requires_grad_(True)
 
@@ -108,6 +111,8 @@ class ServerDLG(Server):
             # reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         elif method == "GRNN":
             reconstruct_data, reconstruct_label = dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+        elif method == "R_T_F":
+            reconstruct_data, reconstruct_label = r_b_f(self.global_model, local_grads, self.secrets)
         return reconstruct_data, reconstruct_label
 
     def fixed_attack(self, method="DLG"):

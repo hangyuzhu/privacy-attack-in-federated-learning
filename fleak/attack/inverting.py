@@ -87,4 +87,4 @@ def ig_multiple(local_model, local_gradients, device="cpu"):
                   scoring_choice='loss')
     rec_machine = FedAvgReconstructor(local_model, (dm, ds), local_steps, local_lr, config, use_updates=use_updates, num_images=8)
     output, stats = rec_machine.reconstruct(local_gradients, labels_pred, img_shape=(3, 32, 32))
-    return output, stats
+    return output, labels_pred
