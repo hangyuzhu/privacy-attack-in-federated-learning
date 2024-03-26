@@ -96,12 +96,14 @@ def main(args):
     tt = transforms.ToPILImage()
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
+    NOTE do not initialize class to object
     global_model = model(n_classes)
 
     # ======= Create R_T_F_imprint ========'
     input_dim = shape_img[1] * shape_img[2] * shape_img[3]
     num_bins = 100
     block = ImprintBlock(input_dim, num_bins)
+
     global_model = torch.nn.Sequential(
         torch.nn.Flatten(), block, torch.nn.Unflatten(dim=1, unflattened_size=tuple(shape_img[1:])), global_model
     )
@@ -110,6 +112,7 @@ def main(args):
 
     # ======= Create Server ========
     # server = serverdlg.ServerDLG(global_model=model(n_classes), momentum=args.server_momentum, device=args.device, data_size=shape_img, label_size=label_size, secrets=secrets)
+    wrong
     server = serverdlg.ServerDLG(global_model=global_model, momentum=args.server_momentum, device=args.device,
                                  data_size=shape_img, label_size=label_size, secrets=secrets)
 

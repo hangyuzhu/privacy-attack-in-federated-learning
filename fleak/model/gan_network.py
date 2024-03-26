@@ -1,6 +1,4 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class MnistGenerator(nn.Module):
@@ -88,7 +86,6 @@ class Cifar10Generator(nn.Module):
         x = self.conv3(x)
         x = self.conv4(x)
         return x
-
 
 
 class Cifar10Discriminator(nn.Module):

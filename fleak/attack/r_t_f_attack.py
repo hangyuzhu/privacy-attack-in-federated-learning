@@ -4,10 +4,11 @@ import copy
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-
 import logging
 
+
 log = logging.getLogger(__name__)
+
 
 class GradualWarmupScheduler(_LRScheduler):
     """Gradually warm-up(increasing) learning rate in optimizer.
@@ -98,6 +99,8 @@ class GradualWarmupScheduler(_LRScheduler):
         after_scheduler_dict = state_dict.pop("after_scheduler")
         self.after_scheduler.__dict__.update(after_scheduler_dict)
         self.__dict__.update(state_dict)
+
+
 def optimizer_lookup(params, optim_name, step_size, scheduler=None, warmup=0, max_iterations=10_000):
     if optim_name.lower() == "adam":
         optimizer = torch.optim.Adam(params, lr=step_size)
