@@ -112,7 +112,7 @@ class ServerDLG(Server):
         elif method == "GRNN":
             reconstruct_data, reconstruct_label = dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         elif method == "R_T_F":
-            reconstruct_data, reconstruct_label = r_b_f(self.global_model, local_grads, self.secrets)
+            reconstruct_data, reconstruct_label = r_b_f(self.global_model, local_grads, self.secrets, self.device)
         return reconstruct_data, reconstruct_label
 
     def fixed_attack(self, method="DLG"):

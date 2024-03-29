@@ -135,19 +135,14 @@ class _BaseAttacker:
     def __init__(self, model, loss_fn, cfg_attack, setup=dict(dtype=torch.float, device=torch.device("cpu"))):
         self.cfg = cfg_attack
         self.memory_format = torch.channels_last if cfg_attack.impl.mixed_precision else torch.contiguous_format
-        self.setup = dict(device=setup["device"], dtype=getattr(torch, cfg_attack.impl.dtype))
+        self.setup = dict(device=setup["device"], dtype=getattr(torch, cfg_attack.impl.dtype))  # device, float
         self.model_template = copy.deepcopy(model)
         self.loss_fn = copy.deepcopy(loss_fn)
 
     def reconstruct(self, server_payload, shared_data, server_secrets=None, dryrun=False):
-
-        stats = defaultdict(list)
-
         # Implement the attack here
         # The attack should consume the shared_data and server payloads and reconstruct
         raise NotImplementedError()
-
-        return reconstructed_data, stats
 
     def __repr__(self):
         raise NotImplementedError()
@@ -529,8 +524,8 @@ class ImprintAttacker(AnalyticAttacker):
             inputs = torch.nn.functional.interpolate(
                 inputs, size=self.data_shape[1:], mode="bicubic", align_corners=False
             )
-        self.dm = self.dm.cuda()
-        self.ds = self.ds.cuda()
+        # self.dm = self.dm.cuda()
+        # self.ds = self.ds.cuda()
         inputs = torch.max(torch.min(inputs, (1 - self.dm) / self.ds), -self.dm / self.ds)
 
         if len(labels) >= inputs.shape[0]:

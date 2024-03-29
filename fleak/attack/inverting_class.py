@@ -324,8 +324,11 @@ def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e
 
         # manually update
         # with torch.no_grad():
-        for g, p in zip(grad, model.parameters()):
-            p.data -= lr * g
+        #     for g, p in zip(grad, model.parameters()):
+        #         p -= lr * g
+        with torch.no_grad():
+            for g, p in zip(grad, list(model.parameters())):
+                p.add_(g, alpha=-lr)
 
         # for ((name, param), grad_part) in zip(model.state_dict().items(), grad):
         #     model.state_dict()[name] = param - lr * grad_part

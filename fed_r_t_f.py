@@ -108,8 +108,14 @@ def main(args):
     # ======= Create Server ========
     # server = serverdlg.ServerDLG(global_model=model(n_classes), momentum=args.server_momentum, device=args.device, data_size=shape_img, label_size=label_size, secrets=secrets)
     # wrong
-    server = serverdlg.ServerDLG(global_model=model(input_dim, num_bins, n_classes, shape_img, args.dataset, args.fed_model), momentum=args.server_momentum, device=args.device,
-                                 data_size=shape_img, label_size=label_size, secrets=secrets)
+    server = serverdlg.ServerDLG(
+        global_model=model(input_dim, num_bins, n_classes, shape_img, args.dataset, args.fed_model),
+        momentum=args.server_momentum,
+        device=args.device,
+        data_size=shape_img,
+        label_size=label_size,
+        secrets=secrets
+    )
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
@@ -164,8 +170,13 @@ def main(args):
             _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
             _recon = _recon.to(dtype=torch.float32)
             plt.subplot(10, 10, i + 1)
-            plt.imshow(_recon[0].permute(1, 2, 0).cpu())
-            plt.axis('off')
+            if _recon.shape[0] > 1:
+                for j in range(_recon.shape[0]):
+                    plt.imshow(_recon[j].permute(1, 2, 0).cpu())
+                    plt.axis('off')
+            else:
+                plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+                plt.axis('off')
     path = r'saved_results'
     if not os.path.exists(path):
         os.makedirs(path)
