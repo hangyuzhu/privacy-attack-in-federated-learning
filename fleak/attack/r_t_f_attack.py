@@ -224,10 +224,13 @@ class _BaseAttacker:
     def _cast_shared_data(self, shared_data):
         """Cast user data to reconstruction data type."""
         cast_grad_list = []
-        grads = list(shared_data["gradients"].values())
-        for shared_grad in grads:
-        # for shared_grad in shared_data["gradients"]:
-            cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in shared_grad]]
+        gradients = copy.deepcopy(shared_data["gradients"])
+        grads = tuple(gradients.values())
+
+        # for shared_grad in grads:
+        # # for shared_grad in shared_data["gradients"]:
+        #     cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in shared_grad]]
+        cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in grads]]
         shared_data["gradients"] = cast_grad_list
         return shared_data
 
@@ -508,14 +511,12 @@ class ImprintAttacker(AnalyticAttacker):
         else:
             raise ValueError(f"No imprint hidden in model {rec_models[0]} according to server.")
 
-        bias_grad = list(shared_data["gradients"].values())[bias_idx].clone()
-        weight_grad = list(shared_data["gradients"].values())[weight_idx].clone()
-        # bias_grad = shared_data["gradients"][0][bias_idx].clone()
-        # weight_grad = shared_data["gradients"][0][weight_idx].clone()
-        if server_secrets["ImprintBlock"]["structure"] == "cumulative":
-            for i in reversed(list(range(1, weight_grad.shape[0]))):
-                weight_grad[i] -= weight_grad[i - 1]
-                bias_grad[i] -= bias_grad[i - 1]
+        bias_grad = shared_data["gradients"][0][bias_idx].clone()
+        weight_grad = shared_data["gradients"][0][weight_idx].clone()
+        # if server_secrets["ImprintBlock"]["structure"] == "cumulative":
+        for i in reversed(list(range(1, weight_grad.shape[0]))):
+            weight_grad[i] -= weight_grad[i - 1]
+            bias_grad[i] -= bias_grad[i - 1]
 
         image_positions = bias_grad.nonzero()
         layer_inputs = self.invert_fc_layer(weight_grad, bias_grad, [])
@@ -528,6 +529,8 @@ class ImprintAttacker(AnalyticAttacker):
             inputs = torch.nn.functional.interpolate(
                 inputs, size=self.data_shape[1:], mode="bicubic", align_corners=False
             )
+        self.dm = self.dm.cuda()
+        self.ds = self.ds.cuda()
         inputs = torch.max(torch.min(inputs, (1 - self.dm) / self.ds), -self.dm / self.ds)
 
         if len(labels) >= inputs.shape[0]:
@@ -545,5 +548,5 @@ class ImprintAttacker(AnalyticAttacker):
             # print(best_guesses.indices.sort().values)
             inputs = inputs[best_guesses.indices]
 
-        reconstructed_data = dict(data=inputs, labels=labels)
-        return reconstructed_data, labels, stats
+        # reconstructed_data = dict(data=inputs, labels=labels)
+        return inputs, labels, stats

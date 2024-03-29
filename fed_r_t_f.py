@@ -15,7 +15,7 @@ from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
 from fleak.data.partition import partition_dataset
 from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
-from fleak.attack.Imprint_class import ImprintBlock
+
 
 
 
@@ -96,30 +96,25 @@ def main(args):
     tt = transforms.ToPILImage()
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
-    NOTE do not initialize class to object
-    global_model = model(n_classes)
+    # NOTE do not initialize class to object
 
     # ======= Create R_T_F_imprint ========'
     input_dim = shape_img[1] * shape_img[2] * shape_img[3]
     num_bins = 100
-    block = ImprintBlock(input_dim, num_bins)
 
-    global_model = torch.nn.Sequential(
-        torch.nn.Flatten(), block, torch.nn.Unflatten(dim=1, unflattened_size=tuple(shape_img[1:])), global_model
-    )
-    secret = dict(weight_idx=0, bias_idx=1, shape=tuple(shape_img[1:]), structure=block.structure)
+    secret = dict(weight_idx=0, bias_idx=1, shape=tuple(shape_img[1:]))
     secrets = {"ImprintBlock": secret}
 
     # ======= Create Server ========
     # server = serverdlg.ServerDLG(global_model=model(n_classes), momentum=args.server_momentum, device=args.device, data_size=shape_img, label_size=label_size, secrets=secrets)
-    wrong
-    server = serverdlg.ServerDLG(global_model=global_model, momentum=args.server_momentum, device=args.device,
+    # wrong
+    server = serverdlg.ServerDLG(global_model=model(input_dim, num_bins, n_classes, shape_img, args.dataset, args.fed_model), momentum=args.server_momentum, device=args.device,
                                  data_size=shape_img, label_size=label_size, secrets=secrets)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
                           # client_model=model(n_classes),
-                          client_model=global_model,
+                          client_model=model(input_dim, num_bins, n_classes, shape_img,args.dataset, args.fed_model),
                           num_epochs=args.num_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,
@@ -221,12 +216,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--server_momentum', default=0., type=float, help='learning momentum on server')
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
-    parser.add_argument('--model', default='resnet18', type=str, choices=MODELS, help='Training model')
+    parser.add_argument('--model', default='robin', type=str, choices=MODELS, help='Training model')
+    parser.add_argument('--fed_model', default='resnet18', type=str, choices=MODELS, help='Training model for federated learning')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')

@@ -30,7 +30,7 @@ class data_cfg_default:
 
 
 def r_b_f(local_model, local_grads, secrets):
-    local_model.eval()  # ?
+    local_model.eval()
     loss_fn = torch.nn.CrossEntropyLoss()
     label_pred = torch.argmin(torch.sum(list(local_grads.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
     rec_machine = ImprintAttacker(local_model, loss_fn, attack_cfg_default, setup)
