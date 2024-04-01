@@ -1,3 +1,5 @@
+import copy
+
 import torch
 from copy import deepcopy
 import time
@@ -6,6 +8,7 @@ from collections import defaultdict, OrderedDict
 from .metrics import InceptionScore, total_variation
 from .utils import label_to_onehot, MedianPool2d
 from .modules import MetaMonkey
+from fleak.utils.test_sgd import SGD, MySGD
 
 
 DEFAULT_CONFIG = dict(signed=False,
@@ -246,34 +249,7 @@ class FedAvgReconstructor(GradientReconstructor):
 
 
 # def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
-#     """Take a few gradient descent steps to fit the model to the given input."""
-#     patched_model = MetaMonkey(model)
-#     if use_updates:
-#         patched_model_origin = deepcopy(patched_model)
-#     for i in range(local_steps):
-#         if batch_size == 0:
-#             outputs = patched_model(inputs, patched_model.parameters)
-#             labels_ = labels
-#         else:
-#             idx = i % (inputs.shape[0] // batch_size)
-#             outputs = patched_model(inputs[idx * batch_size:(idx + 1) * batch_size], patched_model.parameters)
-#             labels_ = labels[idx * batch_size:(idx + 1) * batch_size]
-#         loss = loss_fn(outputs, labels_).sum()
-#         grad = torch.autograd.grad(loss, patched_model.parameters.values(), retain_graph=True, create_graph=True)
-#
-#         patched_model.parameters = OrderedDict((name, param - lr * grad_part)
-#                                                for ((name, param), grad_part)
-#                                                in zip(patched_model.parameters.items(), grad))
-#
-#     if use_updates:
-#         patched_model.parameters = OrderedDict((name, param - param_origin)
-#                                                for ((name, param), (name_origin, param_origin))
-#                                                in zip(patched_model.parameters.items(), patched_model_origin.parameters.items()))
-#     return list(patched_model.parameters.values())
-
-
-# def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
-#     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+#     optimizer = SGD(model.parameters(), lr=lr)
 #     if use_updates:
 #         patched_model_origin = deepcopy(model.state_dict())
 #     for i in range(local_steps):
@@ -299,44 +275,27 @@ class FedAvgReconstructor(GradientReconstructor):
 #     if use_updates:
 #         patched_model = OrderedDict()
 #         for ((name, param), (name_origin, param_origin)) in zip(model.state_dict().items(), patched_model_origin.items()):
-#             patched_model[name] = param - param_origin
+#             patched_model[name] = param_origin - param
 #     return list(patched_model.values())
 
 
 def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
-    """Take a few gradient descent steps to fit the model to the given input."""
-    # patched_model = model
-    parameters = OrderedDict()
-    if use_updates:
-        patched_model_origin = deepcopy(model.state_dict())
+    patched_model = deepcopy(model)
+    accum_grads = []
+    for p in patched_model.parameters():
+        accum_grads.append(torch.zeros_like(p))
+
     for i in range(local_steps):
-        # if batch_size == 0:
-        #     outputs = model(inputs)
-        #     labels_ = labels
-        # else:
-        #     idx = i % (inputs.shape[0] // batch_size)
-        #     outputs = model(inputs[idx * batch_size:(idx + 1) * batch_size])
-        #     labels_ = labels[idx * batch_size:(idx + 1) * batch_size]
-        outputs = model(inputs)
+        outputs = patched_model(inputs)
         labels_ = labels
         loss = loss_fn(outputs, labels_).sum()
-        grad = torch.autograd.grad(loss, model.parameters(), create_graph=True)
+        grad = torch.autograd.grad(loss, patched_model.parameters(), create_graph=True)
 
-        # manually update
-        # with torch.no_grad():
-        #     for g, p in zip(grad, model.parameters()):
-        #         p -= lr * g
-        with torch.no_grad():
-            for g, p in zip(grad, list(model.parameters())):
-                p.add_(g, alpha=-lr)
+        for i, p in enumerate(patched_model.parameters()):
+            p.data -= lr * grad[i].data
+            accum_grads[i] += lr * grad[i]
 
-        # for ((name, param), grad_part) in zip(model.state_dict().items(), grad):
-        #     model.state_dict()[name] = param - lr * grad_part
-
-    if use_updates:
-        for ((name, param), (name_origin, param_origin)) in zip(model.state_dict().items(), patched_model_origin.items()):
-            parameters[name] = param - param_origin
-    return list(parameters.values())
+    return accum_grads
 
 
 def reconstruction_costs(gradients, input_gradient, cost_fn='l2', indices='def', weights='equal'):
@@ -370,8 +329,6 @@ def reconstruction_costs(gradients, input_gradient, cost_fn='l2', indices='def',
         indices = torch.arange(len(input_gradient))[-50:]
     else:
         raise ValueError()
-
-
 
     ex = list(input_gradient.values())[0]
     # extract the first layer's weights
