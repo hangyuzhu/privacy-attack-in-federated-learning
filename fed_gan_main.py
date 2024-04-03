@@ -66,8 +66,8 @@ def main(args):
             for i in range(args.total_clients)]
 
     # ======= Create Model ========
-    # model = MnistDiscriminator
-    model = Cifar10Discriminator
+    model = MnistDiscriminator
+    # model = Cifar10Discriminator
 
     # ======= Create Server ========
     server = Server(global_model=model(), momentum=args.server_momentum, device=args.device)
@@ -176,7 +176,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
-    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
 
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')

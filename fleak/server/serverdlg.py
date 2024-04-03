@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 from .server import Server
 from fleak.attack.idlg import dlg, idlg
 from fleak.attack.inverting import ig, ig_weight, ig_multiple
-from fleak.attack.robbing_the_fed import r_b_f
-from fleak.model.gan_network import MnistGenerator
+from fleak.attack.robbing_the_fed import robbing
+from fleak.model.gan_network import MnistGenerator,Cifar10Generator
 from fleak.attack.GGL import GGLreconstruction
+
 
 
 class ServerDLG(Server):
@@ -105,14 +106,11 @@ class ServerDLG(Server):
             generator = MnistGenerator().to(self.device)
             generator.load_state_dict(torch.load(path)['state_dict'])
             generator.eval()
-            reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator, self.updates[0][-1])
-            # noise = torch.randn(1, 100).to(device)
-            # dummy_data = generator(noise).detach()
-            # reconstruct_data, reconstruct_label = reconstruct_dlg(self.updates[0][-1], dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+            reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator, self.updates[0][-1], self.device)
         elif method == "GRNN":
-            reconstruct_data, reconstruct_label = dlg(self.updates[0][-1], self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
-        elif method == "R_T_F":
-            reconstruct_data, reconstruct_label = r_b_f(self.global_model, local_grads, self.secrets, self.device)
+            reconstruct_data, reconstruct_label = dlg(local_grads, self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
+        elif method == "Robbing":
+            reconstruct_data, reconstruct_label = robbing(self.global_model, local_grads, self.secrets, self.device)
         return reconstruct_data, reconstruct_label
 
     def fixed_attack(self, method="DLG"):

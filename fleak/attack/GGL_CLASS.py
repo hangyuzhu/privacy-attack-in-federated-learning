@@ -7,7 +7,6 @@ from tqdm import tqdm
 import nevergrad as ng
 
 
-device = "cuda" if torch.cuda.is_available() else "CPU"
 
 class GGL_reconstruction():
 
@@ -26,10 +25,10 @@ class GGL_reconstruction():
         self.setting = {'loss_fn':loss_fn,'fl_model':fl_model}
 
 
-    def evaluate_loss(self, z, labels, input_gradients):
-        return self.ng_loss(z=z, input_gradients=input_gradients, metric='l2', labels=labels, generator=self.generator, weight=self.weight, use_tanh=self.use_tanh, **self.setting)
+    def evaluate_loss(self, z, labels, input_gradients, device):
+        return self.ng_loss(z=z, input_gradients=input_gradients, device=device, metric='l2', labels=labels, generator=self.generator, weight=self.weight, use_tanh=self.use_tanh, **self.setting)
 
-    def reconstruct(self, input_gradients, use_pbar=True):
+    def reconstruct(self, input_gradients, device, use_pbar=True):
         labels = self.infer_label(input_gradients)
         print('Inferred label: {}'.format(labels))
 
@@ -37,8 +36,8 @@ class GGL_reconstruction():
 
         for r in pbar:
             ng_data = [self.optimizer.ask() for _ in range(self.num_samples)]
-            noise = torch.randn(1,100)
-            loss = [self.evaluate_loss(z=ng_data[i].value, labels=labels, input_gradients=input_gradients) for i in
+            # noise = torch.randn(1, 100)
+            loss = [self.evaluate_loss(z=ng_data[i].value, labels=labels, input_gradients=input_gradients, device=device) for i in
                     range(self.num_samples)]
             for z, l in zip(ng_data, loss):
                 self.optimizer.tell(z, l)
@@ -62,14 +61,12 @@ class GGL_reconstruction():
 
     @staticmethod
     def infer_label(input_gradient):
-        label_pred = torch.argmin(torch.sum(list(input_gradient.values())[-4])).detach().reshape((1,))
-        # label_pred = torch.argmin(torch.sum(list(input_gradient)[-2])).detach().reshape((1,))
+        label_pred = torch.argmin(torch.sum(list(input_gradient.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
         return label_pred
 
     @staticmethod
-    def ng_loss(z, loss_fn, input_gradients, labels, generator, fl_model, metric='l2', use_tanh=True,weight=None):
+    def ng_loss(z, loss_fn, input_gradients, labels, generator, fl_model, device, metric='l2', use_tanh=True,weight=None):
         z = torch.Tensor(z).unsqueeze(0).to(device)
-
         if use_tanh:
             z = z.tanh()
         with torch.no_grad():

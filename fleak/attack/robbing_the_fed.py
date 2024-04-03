@@ -30,7 +30,7 @@ class data_cfg_default:
     std = (0.229, 0.224, 0.225)
 
 
-def r_b_f(local_model, local_grads, secrets, device):
+def robbing(local_model, local_grads, secrets, device):
     local_model.eval()
     loss_fn = torch.nn.CrossEntropyLoss()
     # label_pred = torch.argmin(torch.sum(list(local_grads.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
