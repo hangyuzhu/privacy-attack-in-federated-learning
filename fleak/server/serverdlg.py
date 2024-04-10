@@ -8,7 +8,7 @@ from .server import Server
 from fleak.attack.idlg import dlg, idlg
 from fleak.attack.inverting import ig, ig_weight, ig_multiple
 from fleak.attack.robbing_the_fed import robbing
-from fleak.model.gan_network import MnistGenerator,Cifar10Generator
+from fleak.model.gan_network import MnistGenerator, Cifar10Generator
 from fleak.attack.GGL import GGLreconstruction
 
 
@@ -102,11 +102,17 @@ class ServerDLG(Server):
         elif method == "inverting-gradient":
             reconstruct_data, reconstruct_label = ig_weight(self.global_model, local_grads, self.device)
         elif method == "GGL":
-            path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
-            generator = MnistGenerator().to(self.device)
-            generator.load_state_dict(torch.load(path)['state_dict'])
+            path = r'D:\leakage-attack-in-federated-learning\models_parameter\cifarGGLgenerator.pth'
+            generator = Cifar10Generator().to(self.device)
+            generator.load_state_dict(torch.load(path))
             generator.eval()
-            reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator, self.updates[0][-1], self.device)
+            reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator, self.updates[0][-1],
+                                                                    self.device)
+            # path = r'D:\leakage-attack-in-federated-learning\models_parameter\GAN.pth'
+            # generator = MnistGenerator().to(self.device)
+            # generator.load_state_dict(torch.load(path)['state_dict'])
+            # generator.eval()
+            # reconstruct_data, reconstruct_label = GGLreconstruction(self.global_model, generator, self.updates[0][-1], self.device)
         elif method == "GRNN":
             reconstruct_data, reconstruct_label = dlg(local_grads, self.dummy_data, self.dummy_labels, self.global_model, 300, 0.001)
         elif method == "Robbing":
