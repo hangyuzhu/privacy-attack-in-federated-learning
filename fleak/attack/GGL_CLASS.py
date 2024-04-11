@@ -8,9 +8,7 @@ import nevergrad as ng
 from fleak.utils.turbo import Turbo1
 
 
-
-
-class GGL_reconstruction():
+class GGL_reconstruction:
 
     def __init__(self, fl_model, generator,loss_fn, numclass=10, search_dim=(100,), budget=500, use_tanh=True):
         self.generator = generator
@@ -26,11 +24,11 @@ class GGL_reconstruction():
 
         self.setting = {'loss_fn': loss_fn, 'fl_model': fl_model}
 
-
     def evaluate_loss(self, z, labels, input_gradients, device):
         return self.ng_loss(z=z, input_gradients=input_gradients, device=device, metric='l2', labels=labels, generator=self.generator, weight=self.weight, use_tanh=self.use_tanh, **self.setting)
 
     def reconstruct(self, input_gradients, device, use_pbar=True):
+        # NOTE
         labels = self.infer_label(input_gradients)
         print('Inferred label: {}'.format(labels))
 
@@ -57,7 +55,6 @@ class GGL_reconstruction():
         with torch.no_grad():
             x_res = self.generator(z_res)
         # x_res = nn.functional.interpolate(x_res, size=(224, 224), mode='area')
-
 
         return x_res, labels
 
@@ -117,7 +114,7 @@ class GGL_reconstruction():
         return dist.item()
 
 
-class BOReconstructor():
+class BOReconstructor:
     """
     Bayesian optimization
     """

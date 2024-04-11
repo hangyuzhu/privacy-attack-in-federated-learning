@@ -248,54 +248,67 @@ class FedAvgReconstructor(GradientReconstructor):
             return self.inception(x_trial)
 
 
-# def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
-#     optimizer = SGD(model.parameters(), lr=lr)
-#     if use_updates:
-#         patched_model_origin = deepcopy(model.state_dict())
-#     for i in range(local_steps):
-#         # if batch_size == 0:
-#         #     outputs = patched_model(inputs, patched_model.parameters)
-#         #     labels_ = labels
-#         # else:
-#         #     idx = i % (inputs.shape[0] // batch_size)
-#         #     outputs = patched_model(inputs[idx * batch_size:(idx + 1) * batch_size], patched_model.parameters)
-#         #     labels_ = labels[idx * batch_size:(idx + 1) * batch_size]
-#         optimizer.zero_grad()
-#         outputs = model(inputs)
-#         labels_ = labels
-#
-#         loss = loss_fn(outputs, labels_).sum()
-#         loss.backward(create_graph=True)
-#         optimizer.step()
-#
-#         # patched_model.parameters = OrderedDict((name, param - lr * grad_part)
-#         #                                        for ((name, param), grad_part)
-#         #                                        in zip(patched_model.parameters.items(), grad))
-#
-#     if use_updates:
-#         patched_model = OrderedDict()
-#         for ((name, param), (name_origin, param_origin)) in zip(model.state_dict().items(), patched_model_origin.items()):
-#             patched_model[name] = param_origin - param
-#     return list(patched_model.values())
-
-
 def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
-    patched_model = deepcopy(model)
-    accum_grads = []
-    for p in patched_model.parameters():
-        accum_grads.append(torch.zeros_like(p))
-
+    optimizer = SGD(model.parameters(), lr=lr)
+    if use_updates:
+        patched_model_origin = deepcopy(model.state_dict())
     for i in range(local_steps):
-        outputs = patched_model(inputs)
+        # if batch_size == 0:
+        #     outputs = patched_model(inputs, patched_model.parameters)
+        #     labels_ = labels
+        # else:
+        #     idx = i % (inputs.shape[0] // batch_size)
+        #     outputs = patched_model(inputs[idx * batch_size:(idx + 1) * batch_size], patched_model.parameters)
+        #     labels_ = labels[idx * batch_size:(idx + 1) * batch_size]
+        optimizer.zero_grad()
+        outputs = model(inputs)
         labels_ = labels
+
         loss = loss_fn(outputs, labels_).sum()
-        grad = torch.autograd.grad(loss, patched_model.parameters(), create_graph=True)
+        loss.backward(create_graph=True)
+        optimizer.step()
 
-        for i, p in enumerate(patched_model.parameters()):
-            p.data -= lr * grad[i].data
-            accum_grads[i] += lr * grad[i]
+        # patched_model.parameters = OrderedDict((name, param - lr * grad_part)
+        #                                        for ((name, param), grad_part)
+        #                                        in zip(patched_model.parameters.items(), grad))
 
-    return accum_grads
+    if use_updates:
+        patched_model = OrderedDict()
+        for ((name, param), (name_origin, param_origin)) in zip(model.state_dict().items(), patched_model_origin.items()):
+            patched_model[name] = param_origin - param
+    return list(patched_model.values())
+
+
+# def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
+#     patched_model = deepcopy(model)
+#     accum_grads = []
+#     for p in patched_model.parameters():
+#         accum_grads.append(torch.zeros_like(p))
+#
+#     for i in range(local_steps):
+#         outputs = patched_model(inputs)
+#         labels_ = labels
+#         loss = loss_fn(outputs, labels_).sum()
+#         grad = torch.autograd.grad(loss, patched_model.parameters(), create_graph=True)
+#
+#         for i, p in enumerate(patched_model.parameters()):
+#             p.data -= lr * grad[i].data
+#             accum_grads[i] += lr * grad[i]
+#
+#     return accum_grads
+
+
+# def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
+#     outputs = model(inputs)
+#     labels_ = labels
+#     loss = loss_fn(outputs, labels_).sum()
+#     grad = torch.autograd.grad(loss, model.parameters(), create_graph=True)
+#
+#     out_grads = []
+#     for g in grad:
+#         out_grads.append(g * local_steps * lr)
+#
+#     return out_grads
 
 
 def reconstruction_costs(gradients, input_gradient, cost_fn='l2', indices='def', weights='equal'):

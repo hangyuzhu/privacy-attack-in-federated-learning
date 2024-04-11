@@ -3,7 +3,6 @@ import torch.nn as nn
 import numpy as np
 
 
-
 class GLU(nn.Module):
     def __init__(self):
         super(GLU, self).__init__()
@@ -13,6 +12,7 @@ class GLU(nn.Module):
         assert nc % 2 == 0, 'channels dont divide 2!'
         nc = int(nc / 2)
         return x[:, :nc] * torch.sigmoid(x[:, nc:])
+
 
 class Generator(nn.Module):
     # initializers
