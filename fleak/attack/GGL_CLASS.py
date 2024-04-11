@@ -61,10 +61,16 @@ class GGL_reconstruction():
 
         return x_res, labels
 
+    # @staticmethod
+    # def infer_label(input_gradient):
+    #     label_pred = torch.argmin(torch.sum(list(input_gradient.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
+    #     return label_pred
+
     @staticmethod
-    def infer_label(input_gradient):
-        label_pred = torch.argmin(torch.sum(list(input_gradient.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
-        return label_pred
+    def infer_label(input_gradient, num_inputs=1):
+        last_weight_min = torch.argsort(torch.sum(input_gradient[-2], dim=-1), dim=-1)[:num_inputs]
+        labels = last_weight_min.detach().reshape((-1,)).requires_grad_(False)
+        return labels
 
     @staticmethod
     def ng_loss(z,
@@ -146,7 +152,7 @@ class BOReconstructor():
         z_lb = -2*np.ones(self.search_dim) # lower bound, you may change -10 to -inf
         z_ub = 2*np.ones(self.search_dim) # upper bound, you may change 10 to inf
 
-        f = lambda z:self.evaluate_loss(z, labels, input_gradient,device)
+        f = lambda z:self.evaluate_loss(z, labels, input_gradient, device)
 
         self.optimizer = Turbo1(
                                 f=f,  # Handle to objective function
