@@ -8,7 +8,7 @@ RESULTS = ['results_fedavg', 'results_fedcrowd', 'results_fedbcc', 'results_bcc'
 
 def get_model_options(dataset):
     from ..model import MnistMLP, CifarMLP, MnistConvNet, CifarConvNet, \
-        ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
+        ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, RobinFed
     from ..model import MnistGenerator, MnistDiscriminator
     model = {
         "mlp": MnistMLP if dataset == 'mnist' else CifarMLP,
@@ -17,6 +17,7 @@ def get_model_options(dataset):
         "resnet34": ResNet34,
         "resnet50": ResNet50,
         "resnet101": ResNet101,
-        "resnet152": ResNet152
+        "resnet152": ResNet152,
+        "robin": RobinFed
     }
     return model

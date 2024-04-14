@@ -37,7 +37,8 @@ class GanClient(Client):
             test_loader=test_loader,
             device=device
         )
-        self.generator = Cifar10Generator().to(self.device)
+        self.generator = MnistGenerator().to(self.device)
+        # self.generator = Cifar10Generator().to(self.device)
         # discriminator optimizer
         self.D_optimizer = optim.SGD(self.client_model.parameters(), lr=1e-3, weight_decay=1e-7)
         # generator optimizer

@@ -48,19 +48,19 @@ def attack(discriminator, generator, device, dataloader, D_optimizer, G_optimize
 
 
 def generate_save_images(generator, fixed_noise, path, data_name):
-    dm = torch.as_tensor([0.4914, 0.4822, 0.4465], device=device, dtype=torch.float32)[:, None, None]
-    ds = torch.as_tensor([0.2023, 0.1994, 0.2010], device=device, dtype=torch.float32)[:, None, None]
+    # dm = torch.as_tensor([0.4914, 0.4822, 0.4465], device=device, dtype=torch.float32)[:, None, None]
+    # ds = torch.as_tensor([0.2023, 0.1994, 0.2010], device=device, dtype=torch.float32)[:, None, None]
     generator.eval()
     with torch.no_grad():
-        # fake = generator(fixed_noise).detach().cpu()
-        fake = generator(fixed_noise).detach()
+        fake = generator(fixed_noise).detach().cpu()
+        # fake = generator(fixed_noise).detach()
 
     for i in range(16):
         plt.subplot(4, 4, i + 1)
-        # ndarr = fake[i].mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
-        ndarr = fake[i].mul_(ds).add_(dm).clamp_(min=0, max=1).permute(1, 2, 0).to("cpu", torch.float32).numpy()
-        # plt.imshow(ndarr, cmap='gray')
-        plt.imshow(ndarr)
+        ndarr = fake[i].mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to("cpu", torch.uint8).numpy()
+        # ndarr = fake[i].mul_(ds).add_(dm).clamp_(min=0, max=1).permute(1, 2, 0).to("cpu", torch.float32).numpy()
+        plt.imshow(ndarr, cmap='gray')
+        # plt.imshow(ndarr)
         plt.axis('off')
     if not os.path.exists(path):
         os.makedirs(path)

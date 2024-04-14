@@ -151,8 +151,17 @@ def main(args):
             _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
             _recon = _recon.to(dtype=torch.float32)
             plt.subplot(10, 10, i + 1)
-            plt.imshow(_recon[0].permute(1, 2, 0).cpu())
-            plt.axis('off')
+            if _recon.shape[0]>1:
+                counter = 0
+                for j in range(_recon.shape[0]):
+                    counter += 1
+                    plt.subplot(10 * len(history), 10, counter)
+                    plt.imshow(_recon[j].permute(1,2,0).cpu())
+                    plt.axis('off')
+            else:
+                plt.subplot(10, 10, i + 1)
+                plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+                plt.axis('off')
     path = r'saved_results'
     if not os.path.exists(path):
         os.makedirs(path)

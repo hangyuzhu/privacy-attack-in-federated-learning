@@ -4,9 +4,9 @@ import numpy as np
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 
-
 from .server import Server
 from fleak.attack import GRNN
+
 
 class ServerGRNN(Server):
     def __init__(self,
@@ -30,7 +30,6 @@ class ServerGRNN(Server):
         self.valid_loader = valid_loader
         self.test_loader = test_loader
         self.img_shape = img_shape
-
 
     def comp_grads(self, weights: OrderedDict):
         o_weights = self.global_model.state_dict()
@@ -78,4 +77,4 @@ class ServerGRNN(Server):
 
     def GRNNattack(self):
         # GRNN.Reconstruction(self.num_classes, self.global_model, self.img_shape, self.updates[0][-1])
-        GRNN.Reconstruction(self.num_classes,self.global_model, self.img_shape, self.train_loader)
+        GRNN.Reconstruction(self.num_classes, self.global_model, self.img_shape, self.train_loader)

@@ -4,10 +4,11 @@ import copy
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-
 import logging
 
+
 log = logging.getLogger(__name__)
+
 
 class GradualWarmupScheduler(_LRScheduler):
     """Gradually warm-up(increasing) learning rate in optimizer.
@@ -98,6 +99,8 @@ class GradualWarmupScheduler(_LRScheduler):
         after_scheduler_dict = state_dict.pop("after_scheduler")
         self.after_scheduler.__dict__.update(after_scheduler_dict)
         self.__dict__.update(state_dict)
+
+
 def optimizer_lookup(params, optim_name, step_size, scheduler=None, warmup=0, max_iterations=10_000):
     if optim_name.lower() == "adam":
         optimizer = torch.optim.Adam(params, lr=step_size)
@@ -132,19 +135,14 @@ class _BaseAttacker:
     def __init__(self, model, loss_fn, cfg_attack, setup=dict(dtype=torch.float, device=torch.device("cpu"))):
         self.cfg = cfg_attack
         self.memory_format = torch.channels_last if cfg_attack.impl.mixed_precision else torch.contiguous_format
-        self.setup = dict(device=setup["device"], dtype=getattr(torch, cfg_attack.impl.dtype))
+        self.setup = dict(device=setup["device"], dtype=getattr(torch, cfg_attack.impl.dtype))  # device, float
         self.model_template = copy.deepcopy(model)
         self.loss_fn = copy.deepcopy(loss_fn)
 
     def reconstruct(self, server_payload, shared_data, server_secrets=None, dryrun=False):
-
-        stats = defaultdict(list)
-
         # Implement the attack here
         # The attack should consume the shared_data and server payloads and reconstruct
         raise NotImplementedError()
-
-        return reconstructed_data, stats
 
     def __repr__(self):
         raise NotImplementedError()
@@ -221,10 +219,13 @@ class _BaseAttacker:
     def _cast_shared_data(self, shared_data):
         """Cast user data to reconstruction data type."""
         cast_grad_list = []
-        grads = list(shared_data["gradients"].values())
-        for shared_grad in grads:
-        # for shared_grad in shared_data["gradients"]:
-            cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in shared_grad]]
+        gradients = copy.deepcopy(shared_data["gradients"])
+        grads = tuple(gradients.values())
+
+        # for shared_grad in grads:
+        # # for shared_grad in shared_data["gradients"]:
+        #     cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in shared_grad]]
+        cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in grads]]
         shared_data["gradients"] = cast_grad_list
         return shared_data
 
@@ -505,14 +506,12 @@ class ImprintAttacker(AnalyticAttacker):
         else:
             raise ValueError(f"No imprint hidden in model {rec_models[0]} according to server.")
 
-        bias_grad = list(shared_data["gradients"].values())[bias_idx].clone()
-        weight_grad = list(shared_data["gradients"].values())[weight_idx].clone()
-        # bias_grad = shared_data["gradients"][0][bias_idx].clone()
-        # weight_grad = shared_data["gradients"][0][weight_idx].clone()
-        if server_secrets["ImprintBlock"]["structure"] == "cumulative":
-            for i in reversed(list(range(1, weight_grad.shape[0]))):
-                weight_grad[i] -= weight_grad[i - 1]
-                bias_grad[i] -= bias_grad[i - 1]
+        bias_grad = shared_data["gradients"][0][bias_idx].clone()
+        weight_grad = shared_data["gradients"][0][weight_idx].clone()
+        # if server_secrets["ImprintBlock"]["structure"] == "cumulative":
+        for i in reversed(list(range(1, weight_grad.shape[0]))):
+            weight_grad[i] -= weight_grad[i - 1]
+            bias_grad[i] -= bias_grad[i - 1]
 
         image_positions = bias_grad.nonzero()
         layer_inputs = self.invert_fc_layer(weight_grad, bias_grad, [])
@@ -525,6 +524,8 @@ class ImprintAttacker(AnalyticAttacker):
             inputs = torch.nn.functional.interpolate(
                 inputs, size=self.data_shape[1:], mode="bicubic", align_corners=False
             )
+        # self.dm = self.dm.cuda()
+        # self.ds = self.ds.cuda()
         inputs = torch.max(torch.min(inputs, (1 - self.dm) / self.ds), -self.dm / self.ds)
 
         if len(labels) >= inputs.shape[0]:
@@ -542,5 +543,5 @@ class ImprintAttacker(AnalyticAttacker):
             # print(best_guesses.indices.sort().values)
             inputs = inputs[best_guesses.indices]
 
-        reconstructed_data = dict(data=inputs, labels=labels)
-        return reconstructed_data, labels, stats
+        # reconstructed_data = dict(data=inputs, labels=labels)
+        return inputs, labels, stats
