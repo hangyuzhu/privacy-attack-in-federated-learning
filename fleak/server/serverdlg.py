@@ -12,7 +12,6 @@ from fleak.model.gan_network import MnistGenerator, Cifar10Generator
 from fleak.attack.GGL import GGLreconstruction
 
 
-
 class ServerDLG(Server):
 
     def __init__(self,
@@ -23,11 +22,13 @@ class ServerDLG(Server):
                  data_size=None,
                  label_size=None,
                  secrets = None,
+                 test_loader=None,
                  device=None,):
         super(ServerDLG, self).__init__(server_id=server_id,
                                         server_group=server_group,
                                         global_model=global_model,
                                         momentum=momentum,
+                                        test_loader=test_loader,
                                         device=device)
         self.data_size = data_size
         self.label_size = label_size

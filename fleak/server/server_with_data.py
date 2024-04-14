@@ -24,11 +24,12 @@ class ServerGRNN(Server):
                                         server_group=server_group,
                                         global_model=global_model,
                                         momentum=momentum,
+                                         test_loader=test_loader,
                                         device=device)
         self.num_classes = num_classes
         self.train_loader = train_loader
         self.valid_loader = valid_loader
-        self.test_loader = test_loader
+        # self.test_loader = test_loader
         self.img_shape = img_shape
 
     def comp_grads(self, weights: OrderedDict):

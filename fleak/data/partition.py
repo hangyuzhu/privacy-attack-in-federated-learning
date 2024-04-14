@@ -50,6 +50,71 @@ def dirichlet_partition(dataset, n_parties, beta):
     return user_idx
 
 
+def fix_class_noniid(dataset, num_users, num_classes):
+    """
+    :param dataset: torch Dataset
+    :param num_users: number of users
+    :param num_classes: number of label classes
+    :return: partitioned data index
+    """
+    num_samples_per_client = len(dataset) // num_users
+    num_samples_per_class = len(dataset) // 10
+
+    # Default for 10 classes
+    class_idx = list(range(10))
+    targets = np.array(dataset.targets)
+
+    idx = targets.argsort()
+    idxs = {}
+    start = 0
+    for i in range(10):
+        idxs[i] = idx[start:start + num_samples_per_class]
+        np.random.shuffle(idxs[i])
+        start += num_samples_per_class
+    assert len(idxs[0]) == num_samples_per_class
+
+    user_dataset_indexes = {}
+    label_users = {}
+    removed_idx = []
+
+    for i in range(num_users):
+        selected_class = np.random.choice(class_idx, num_classes, replace=False)
+        user_dataset_indexes[i] = np.concatenate(
+            [idxs[selected_class[j]][0:num_samples_per_client // num_classes]
+             for j in range(num_classes)])
+
+        # This is created only for debugging
+        label_users[i] = np.concatenate(
+            [targets[idxs[selected_class[j]][0:num_samples_per_client // num_classes]]
+             for j in range(num_classes)])
+
+        class_idx = list(set(class_idx) - set(selected_class))
+        for num in range(num_classes):
+            idxs[selected_class[num]] = list(set(idxs[selected_class[num]]) - set(
+                idxs[selected_class[num]][0:num_samples_per_client // num_classes]))
+
+            if len(idxs[selected_class[num]]) == 0:
+                removed_idx.append(selected_class[num])
+
+        if i != (num_users - 1) and len(class_idx) == 0:
+            class_idx = list(set(np.arange(10)) - set(removed_idx))
+    print(label_users)
+    return user_dataset_indexes
+
+
+def split_train_valid_test(user_data_indexes: dict, valid_ratio: float, test_ratio: float):
+    train_index, valid_index, test_index = {}, {}, {}
+    for c_id, user_data_index in user_data_indexes.items():
+        np.random.shuffle(user_data_index)
+        len_user_data_index = len(user_data_index)
+        valid_size = int(len_user_data_index * valid_ratio)
+        test_size = int(len_user_data_index * test_ratio)
+        valid_index[c_id] = user_data_index[0:valid_size]
+        test_index[c_id] = user_data_index[len_user_data_index-test_size:]
+        train_index[c_id] = user_data_index[valid_size:len_user_data_index-test_size]
+    return train_index, valid_index, test_index
+
+
 def partition_dataset(dataset: str, data_dir: str, data_augment: bool, iid: bool, n_parties,
                       valid_prop=0, test_prop=0.2, beta=0.5, verbose=True):
     """
@@ -84,16 +149,14 @@ def partition_dataset(dataset: str, data_dir: str, data_augment: bool, iid: bool
         user_idx = iid_partition(train_dataset, n_parties)
     else:
         user_idx = dirichlet_partition(train_dataset, n_parties, beta)
-    valid_user_idx = {i: user_idx[i][0:int(len(user_idx[i]) * valid_prop)] for i in range(n_parties)}
-    test_user_idx = {i: user_idx[i][len(user_idx[i]) - int(len(user_idx[i]) * test_prop):] for i in range(n_parties)}
-    train_user_idx = {
-        i: user_idx[i][int(len(user_idx[i]) * valid_prop):len(user_idx[i]) - int(len(user_idx[i]) * test_prop)]
-        for i in range(n_parties)}
+        # user_idx = fix_class_noniid(train_dataset, n_parties, 2)
+    train_user_idx, valid_user_idx, test_user_idx = split_train_valid_test(user_idx, valid_prop, test_prop)
 
     if verbose:
-        train_user_label = {user: train_dataset.targets[idx] for (user, idx) in train_user_idx.items()}
-        valid_user_label = {user: train_dataset.targets[idx] for (user, idx) in valid_user_idx.items()}
-        test_user_label = {user: train_dataset.targets[idx] for (user, idx) in test_user_idx.items()}
+        targets = np.array(train_dataset.targets)
+        train_user_label = {user: targets[idx] for (user, idx) in train_user_idx.items()}
+        valid_user_label = {user: targets[idx] for (user, idx) in valid_user_idx.items()}
+        test_user_label = {user: targets[idx] for (user, idx) in test_user_idx.items()}
         print('training labels: ', train_user_label)
         print('validation labels: ', valid_user_label)
         print('testing labels: ', test_user_label)

@@ -1,6 +1,6 @@
-import numpy as np
 import torch
 import copy
+import numpy as np
 
 
 class Server:
@@ -10,6 +10,7 @@ class Server:
                  server_group=None,
                  global_model=None,
                  momentum=0.0,
+                 test_loader=None,
                  device=None):
         self.server_id = server_id
         self.server_group = server_group
@@ -21,6 +22,7 @@ class Server:
         self.selected_clients = None
         self.updates = []
         self.cur_round = 0
+        self.test_loader = test_loader
 
     @property
     def model_size(self):
