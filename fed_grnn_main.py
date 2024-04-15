@@ -15,7 +15,7 @@ from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
 from fleak.data.partition import partition_dataset
 from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
-from fleak.attack.idlg import dlg
+from fleak.attack.dlg import dlg
 
 
 

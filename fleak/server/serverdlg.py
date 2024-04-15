@@ -1,96 +1,46 @@
-import copy
 import torch
-import numpy as np
-from collections import OrderedDict
-import matplotlib.pyplot as plt
 
 from .server import Server
-from fleak.attack.idlg import dlg, idlg
-from fleak.attack.inverting import ig, ig_weight, ig_multiple
-from fleak.attack.robbing_the_fed import robbing
-from fleak.model.gan_network import MnistGenerator, Cifar10Generator
-from fleak.attack.GGL import GGLreconstruction
+from ..attack.dlg import dlg, idlg
+from ..attack.inverting import ig, ig_weight, ig_multiple
+from ..attack.robbing_the_fed import robbing
+from ..model.gan_network import MnistGenerator, Cifar10Generator
+from ..attack.GGL import GGLreconstruction
 
 
 class ServerDLG(Server):
 
-    def __init__(self,
-                 server_id=None,
-                 server_group=None,
-                 global_model=None,
-                 momentum=0.0,
-                 data_size=None,
-                 label_size=None,
-                 secrets = None,
-                 test_loader=None,
-                 device=None,):
-        super(ServerDLG, self).__init__(server_id=server_id,
-                                        server_group=server_group,
-                                        global_model=global_model,
-                                        momentum=momentum,
-                                        test_loader=test_loader,
-                                        device=device)
-        self.data_size = data_size
-        self.label_size = label_size
-        self.secrets = secrets
-        self.dummy_data = torch.randn(data_size).to(device).requires_grad_(True)
-        self.dummy_labels = torch.randn(label_size).to(device).requires_grad_(True)
-
-    def comp_grads(self, weights: OrderedDict):
-        o_weights = self.global_model.state_dict()
-        grads = OrderedDict()
-        for (key, value) in weights.items():
-            grads[key] = o_weights[key] - weights[key]
-            # grads[key].requires_grad = False
-        return grads
-
-    # def train_eval(self, clients=None, set_to_use='test'):
-    #     if clients is None:
-    #         clients = self.selected_clients
-    #     eval_correct = 0
-    #     eval_total = 0
-    #     for c in clients:
-    #         c.synchronize(self.cur_round, self.global_model.state_dict())
-    #         eval_cor, eval_tot = c.evaluate(set_to_use=set_to_use)
-    #         eval_correct += eval_cor
-    #         eval_total += eval_tot
-    #         # train and update client model
-    #         c_id, num_samples, update = c.train()
-    #
-    #         # convert to gradients
-    #         # grads = self.comp_grads(update)
-    #         # update client round
-    #         # self.updates.append((c_id, num_samples, grads))
-    #         self.updates.append((c_id, num_samples, update))
-    #     eval_accuracy = eval_correct / eval_total
-    #     print('Round %d: ' % self.cur_round + set_to_use + ' accuracy %.4f' % eval_accuracy)
-    #     # update communication round
-    #     self.cur_round += 1
-    #     return eval_accuracy
-
-    def train(self, clients=None):
-        # just for training
-        if clients is None:
-            clients = self.selected_clients
-        for c in clients:
-            c.synchronize(self.cur_round, self.global_model.state_dict())
-            # train and update client model
-            c_id, num_samples, update = c.train()
-            # gather client uploads into a buffer
-            self.updates.append((c_id, num_samples, update))
-        # update communication round
-        self.cur_round += 1
+    def __init__(
+        self,
+        server_id=None,
+        server_group=None,
+        global_model=None,
+        momentum=0.0,
+        dummy_data=None,
+        test_loader=None,
+        device=None
+    ):
+        super(ServerDLG, self).__init__(
+            server_id=server_id,
+            server_group=server_group,
+            global_model=global_model,
+            momentum=momentum,
+            test_loader=test_loader,
+            device=device
+        )
+        self.dummy_data = dummy_data
 
     def random_attack(self, method="DLG"):
         """
         Randomly select a client to attack from scratch
+
         :param method: attack method
         :return: reconstructed data and labels
         """
         reconstruct_data = None
         reconstruct_label = None
 
-        local_grads = self.comp_grads(self.updates[0][-1])
+        local_grads = self.cal_diff(self.updates[0][-1])
         # update global model
         self.global_model.load_state_dict(self.updates[0][-1])
 

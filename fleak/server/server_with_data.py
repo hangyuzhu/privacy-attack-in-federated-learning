@@ -9,6 +9,7 @@ from fleak.attack import GRNN
 
 
 class ServerGRNN(Server):
+
     def __init__(self,
                  server_id=None,
                  server_group=None,
@@ -32,13 +33,18 @@ class ServerGRNN(Server):
         # self.test_loader = test_loader
         self.img_shape = img_shape
 
-    def comp_grads(self, weights: OrderedDict):
-        o_weights = self.global_model.state_dict()
-        grads = OrderedDict()
-        for (key, value) in weights.items():
-            grads[key] = o_weights[key] - weights[key]
-            # grads[key].requires_grad = False
-        return grads
+    def cal_diff(self, local_params: OrderedDict):
+        """
+        Calculate the difference between the global model and uploaded local model
+
+        :param local_params: model parameters of uploaded model
+        :return: the difference
+        """
+        o_params = self.global_model.state_dict()
+        diffs = OrderedDict()
+        for (key, value) in local_params.items():
+            diffs[key] = o_params[key] - local_params[key]
+        return diffs
 
     def train_eval(self, clients=None, set_to_use='test'):
         if clients is None:
@@ -54,7 +60,7 @@ class ServerGRNN(Server):
             c_id, num_samples, update = c.train()
 
             # convert to gradients
-            grads = self.comp_grads(update)
+            grads = self.cal_diff(update)
             # update client round
             self.updates.append((c_id, num_samples, update, grads))
         eval_accuracy = eval_correct / eval_total

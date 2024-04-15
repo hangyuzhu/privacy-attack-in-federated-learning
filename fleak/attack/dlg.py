@@ -1,52 +1,56 @@
-import os
-# os.chdir("../..")
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-import copy
+from collections import OrderedDict
+
+from ..server.dummy import TorchDummy
 
 
 def criterion(pred, target):
     return torch.mean(torch.sum(- target * F.log_softmax(pred, dim=-1), 1))
 
 
-def dlg(global_model, local_grads, dummy_data, dummy_label, epochs, lr=1.0, device="cpu"):
-    """
+def generate_dummy_data_label(dummy: TorchDummy, device: str):
+    dummy_data = torch.randn(dummy.data_shape).to(device).requires_grad_(True)
+    dummy_label = torch.randn(dummy.label_shape).to(device).requires_grad_(True)
+    return dummy_data, dummy_label
+
+
+def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu"):
+    """ Deep Leakage Gradient
+
     https://proceedings.neurips.cc/paper/2019/file/60a6c4002cc7b29142def8871531281a-Paper.pdf
-    :param global_model: global model
-    :param local_grads: uploaded gradients
-    :param dummy_data: fake data
-    :param dummy_label: fake labels
-    :param epochs: number of epochs
+
+    :param model: dlg model
+    :param grads: model gradients of the ground truth data
+    :param dummy: TorchDummy object
+    :param epochs: Number of epochs
     :param device: cpu or cuda
     :return: dummy data
     """
-    global_model.eval()
-    optimizer = torch.optim.LBFGS([dummy_data], lr=lr)
+    model.eval()
 
-    # gradient closure
-    minimal_value_so_far = torch.as_tensor(float("inf"), device=device, dtype=torch.float32)
-    best_dummy_data = None
+    dummy_data, dummy_label = generate_dummy_data_label(dummy, device)
+    optimizer = torch.optim.LBFGS([dummy_data, dummy_label])
+
     for iters in range(epochs):
         def closure():
             optimizer.zero_grad()
-            global_model.zero_grad()
-            dummy_pred = global_model(dummy_data)
-            dummy_loss = criterion(dummy_pred, dummy_label)
-            dummy_dy_dx = torch.autograd.grad(dummy_loss, global_model.parameters(), create_graph=True)
+
+            dummy_pred = model(dummy_data)
+            dummy_onehot_label = F.softmax(dummy_label, dim=-1)
+            dummy_loss = criterion(dummy_pred, dummy_onehot_label)
+            dummy_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
             grad_diff = 0
-            for dummy_g, origin_g in zip(dummy_dy_dx, local_grads.values()):
-                grad_diff += ((dummy_g - origin_g).pow(2)).sum()
+            for dummy_g, origin_g in zip(dummy_dy_dx, grads.values()):
+                grad_diff += ((dummy_g - origin_g)**2).sum()
             grad_diff.backward()
+
             return grad_diff
 
-        objective_value = optimizer.step(closure)
-        with torch.no_grad():
-            if objective_value < minimal_value_so_far:
-                minimal_value_so_far = objective_value.detach()
-                best_dummy_data = dummy_data.detach().clone()
-    return best_dummy_data
+        optimizer.step(closure)
+    return dummy_data
 
 
 def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cpu"):

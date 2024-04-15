@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms
 
-from fleak.server import serverdlg
+from fleak.server import Server
+from fleak.server.dummy import TorchDummy
 from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
@@ -38,7 +39,8 @@ def main(args):
         test_prop=args.test_prop,
         batch_size=args.batch_size
     )
-    n_classes = len(set(np.array(test_loader.dataset.targets)))
+    dummy = TorchDummy(test_loader.dataset, batch_size=1)
+    n_classes = dummy.n_classes
 
     # ======= Datasize ========
     if args.dataset == "cifar10":
@@ -64,11 +66,15 @@ def main(args):
     model = get_model_options(args.dataset)[args.model]
 
     # ======= Create Server ========
-    server = serverdlg.ServerDLG(global_model=model(n_classes),
-                                 momentum=args.server_momentum,
-                                 device=args.device,
-                                 data_size=shape_img,
-                                 label_size=label_size)
+    # server = serverdlg.ServerDLG(global_model=model(n_classes),
+    #                              momentum=args.server_momentum,
+    #                              device=args.device,
+    #                              data_size=shape_img,
+    #                              label_size=label_size)
+    server = Server(global_model=model(n_classes),
+                    test_loader=test_loader,
+                    dummy=dummy,
+                    device=args.device)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
@@ -101,7 +107,7 @@ def main(args):
 
 
         #attack
-        reconstruct_data, reconstruct_label = server.random_attack(method=args.attack)
+        reconstruct_data = server.attack(method=args.attack)
         history.append(reconstruct_data.clone().detach())
 
         """before or after ?"""
@@ -169,7 +175,7 @@ if __name__ == '__main__':
                         help='strategy used in federated learning')
 
     parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
-    parser.add_argument('--total_clients', default=10 , type=int, help='total number of clients')
+    parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
     parser.add_argument('--num_epochs', default=2, type=int, metavar='N',
                         help='number of local client epochs')
@@ -181,7 +187,6 @@ if __name__ == '__main__':
     # for fedper
     parser.add_argument('--num_shared_layers', default=-1, type=int, help='number of shared layers for fedper')
 
-    parser.add_argument('--server_momentum', default=0., type=float, help='learning momentum on server')
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')

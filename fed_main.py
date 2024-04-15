@@ -37,7 +37,6 @@ def main(args):
 
     # ======= Create Server ========
     server = Server(global_model=model(n_classes),
-                    momentum=args.server_momentum,
                     test_loader=test_loader,
                     device=args.device)
 
@@ -124,7 +123,6 @@ if __name__ == '__main__':
     # for fedper
     parser.add_argument('--num_shared_layers', default=-1, type=int, help='number of shared layers for fedper')
 
-    parser.add_argument('--server_momentum', default=0., type=float, help='learning momentum on server')
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')

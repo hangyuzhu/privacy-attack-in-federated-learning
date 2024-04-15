@@ -1,43 +1,59 @@
 import torch
 import copy
 import numpy as np
+from collections import OrderedDict
+
+from ..attack.dlg import dlg, idlg
+from ..attack.inverting import ig, ig_weight, ig_multiple
+from ..attack.robbing_the_fed import robbing
+from ..model.gan_network import MnistGenerator, Cifar10Generator
+from ..attack.GGL import GGLreconstruction
 
 
 class Server:
 
-    def __init__(self,
-                 server_id=None,
-                 server_group=None,
-                 global_model=None,
-                 momentum=0.0,
-                 test_loader=None,
-                 device=None):
+    def __init__(
+        self,
+        server_id=None,
+        server_group=None,
+        global_model=None,
+        test_loader=None,
+        dummy=None,
+        device=None
+    ):
+        # server info
         self.server_id = server_id
         self.server_group = server_group
         self.device = device
-        self.global_model = global_model.to(self.device)
-        self.momentum = momentum
-        self.momentum_buffer = None
-        self._init_momentum()
         self.selected_clients = None
         self.updates = []
         self.cur_round = 0
+        # model & data
+        self.global_model = global_model.to(self.device)
         self.test_loader = test_loader
+        self.dummy = dummy
 
     @property
     def model_size(self):
-        return sum([p.numel() * p.element_size()
-                    for p in self.global_model.state_dict().values()]) / 1e6
-
-    def _init_momentum(self):
-        if self.momentum:
-            self.momentum_buffer = copy.deepcopy(self.global_model.state_dict())
-            for key in self.momentum_buffer:
-                self.momentum_buffer[key] = 0
+        return sum([p.numel() * p.element_size() for p in self.global_model.state_dict().values()])
 
     def select_clients(self, possible_clients, num_clients=20):
         num_clients = min(num_clients, len(possible_clients))
         self.selected_clients = np.random.choice(possible_clients, num_clients, replace=False)
+
+    @staticmethod
+    def _subtract(global_params, local_params):
+        """
+        Calculate the difference between the global model and uploaded local model
+
+        :param global_params: model parameters of the global model
+        :param local_params: model parameters of uploaded model
+        :return: the difference
+        """
+        diffs = OrderedDict()
+        for (key, value) in local_params.items():
+            diffs[key] = global_params[key] - local_params[key]
+        return diffs
 
     def train_eval(self, clients=None, set_to_use='test'):
         if clients is None:
@@ -86,16 +102,6 @@ class Server:
         print('Round %d: ' % self.cur_round + set_to_use + ' accuracy %.4f' % accuracy)
         return accuracy
 
-    def accumulate_momentum(self, averaged_soln):
-        # momentum is applied on the server
-        if self.momentum_buffer is not None:
-            for key in self.momentum_buffer.keys():
-                if 'running_' in key:
-                    continue
-                delta_w = self.global_model.state_dict()[key] - averaged_soln[key]
-                self.momentum_buffer[key] = self.momentum * self.momentum_buffer[key] + (1 - self.momentum) * delta_w
-                averaged_soln[key] = self.global_model.state_dict()[key] - self.momentum_buffer[key]
-
     def federated_averaging(self):
         total_samples = np.sum([update[1] for update in self.updates])
         averaged_soln = copy.deepcopy(self.updates[0][2])
@@ -107,11 +113,26 @@ class Server:
                     averaged_soln[key] = averaged_soln[key] * self.updates[i][1] / total_samples
                 else:
                     averaged_soln[key] += self.updates[i][2][key] * self.updates[i][1] / total_samples
-        self.accumulate_momentum(averaged_soln)
         # update global model
         self.global_model.load_state_dict(averaged_soln)
         # clear uploads buffer
         self.updates = []
+
+    def attack(self, method="DLG"):
+        """
+        Randomly select a client to attack from scratch
+
+        :param method: attack method
+        :return: reconstructed data and labels
+        """
+        local_grads = self._subtract(self.global_model.state_dict(), self.updates[0][-1])
+        # update global model
+        self.global_model.load_state_dict(self.updates[0][-1])
+
+        # if method == "DLG":
+        reconstruct_data = dlg(self.global_model, local_grads, self.dummy, 300, self.device)
+
+        return reconstruct_data
 
     def save_model(self, path):
         # Save server model
