@@ -15,16 +15,19 @@ def main(args):
     clients_per_round = int(args.total_clients * args.C)
 
     # ======= Prepare client Dataset ========
+    partition_method = dict(iid=args.iid,
+                            p_type=args.p_type,
+                            beta=args.beta,
+                            n_classes=args.num_classes_per_client)
     data_dir = args.data_path + args.dataset
     train_loaders, valid_loaders, test_loaders, test_loader = generate_dataloaders(
         dataset=args.dataset,
         data_dir=data_dir,
         data_augment=args.data_augment,
-        iid=args.iid,
+        p_method=partition_method,
         n_parties=args.total_clients,
         valid_prop=args.valid_prop,
         test_prop=args.test_prop,
-        beta=args.beta,
         batch_size=args.batch_size
     )
     n_classes = len(set(np.array(test_loader.dataset.targets)))
@@ -33,7 +36,10 @@ def main(args):
     model = get_model_options(args.dataset)[args.model]
 
     # ======= Create Server ========
-    server = Server(global_model=model(n_classes), momentum=args.server_momentum, device=args.device)
+    server = Server(global_model=model(n_classes),
+                    momentum=args.server_momentum,
+                    test_loader=test_loader,
+                    device=args.device)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
@@ -127,12 +133,16 @@ if __name__ == '__main__':
                         type=str, help='path of the dataset')
     parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
     parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
-
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')
     parser.add_argument('--iid', default=False, action='store_true', help='client dataset partition methods')
+    parser.add_argument('--p_type', type=str, default="dirichlet", choices=["dirichlet", "fix_class"],
+                        help='type of non-iid partition method')
     parser.add_argument('--beta', type=float, default=0.5,
                         help='The parameter for the dirichlet distribution for data partitioning')
+    parser.add_argument('--num_classes_per_client', type=int, default=2, choices=[2, 5, 20, 50, 100],
+                        help='number of data classes on one client')
+
     parser.add_argument('--save_results', default=False, action='store_true', help='if saving the results')
 
     parser.add_argument('--device', default='cuda:0', help='device')

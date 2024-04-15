@@ -4,19 +4,18 @@ from .image_dataset import DatasetSplit
 from .partition import partition_dataset
 
 
-def generate_dataloaders(dataset: str, data_dir: str, data_augment: bool, iid: bool, n_parties,
-                         valid_prop=0, test_prop=0.2, beta=0.5, batch_size=50, verbose=True):
+def generate_dataloaders(dataset: str, data_dir: str, data_augment: bool, p_method: dict, n_parties,
+                         valid_prop=0, test_prop=0.2, batch_size=50, verbose=True):
     """
     Construct 3 dataloaders for clients and 1 test dataloader for the server
     This method is applicable for pfl approaches
     :param dataset: name of the dataset
     :param data_dir: path of dataset
     :param data_augment: if using data augmentation
-    :param iid: if using iid data
+    :param p_method: partition method
     :param n_parties: number of users
     :param valid_prop: proportion of validation data 0 <= v < 1
     :param test_prop: proportion of testing data 0 <= v < 1
-    :param beta: hyperparameter of Dirichlet distribution
     :param batch_size: training batch size
     :param verbose: if printing the partitioned client data labels
     :return: train_loaders, valid_loaders, test_loaders, test_loader (for server)
@@ -25,11 +24,10 @@ def generate_dataloaders(dataset: str, data_dir: str, data_augment: bool, iid: b
         dataset=dataset,
         data_dir=data_dir,
         data_augment=data_augment,
-        iid=iid,
+        p_method=p_method,
         n_parties=n_parties,
         valid_prop=valid_prop,
         test_prop=test_prop,
-        beta=beta,
         verbose=verbose
     )
 

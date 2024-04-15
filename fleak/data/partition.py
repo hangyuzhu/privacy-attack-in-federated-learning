@@ -52,6 +52,7 @@ def dirichlet_partition(dataset, n_parties, beta):
 
 def fix_class_noniid(dataset, num_users, num_classes):
     """
+    The partition method proposed by the original FL paper
     :param dataset: torch Dataset
     :param num_users: number of users
     :param num_classes: number of label classes
@@ -102,21 +103,34 @@ def fix_class_noniid(dataset, num_users, num_classes):
     return user_dataset_indexes
 
 
-def split_train_valid_test(user_data_indexes: dict, valid_ratio: float, test_ratio: float):
+def split_train_valid_test(user_data_indexes, valid_ratio: float, test_ratio: float):
     train_index, valid_index, test_index = {}, {}, {}
-    for c_id, user_data_index in user_data_indexes.items():
-        np.random.shuffle(user_data_index)
-        len_user_data_index = len(user_data_index)
-        valid_size = int(len_user_data_index * valid_ratio)
-        test_size = int(len_user_data_index * test_ratio)
-        valid_index[c_id] = user_data_index[0:valid_size]
-        test_index[c_id] = user_data_index[len_user_data_index-test_size:]
-        train_index[c_id] = user_data_index[valid_size:len_user_data_index-test_size]
+    if isinstance(user_data_indexes, dict):
+        for c_id, user_data_index in user_data_indexes.items():
+            np.random.shuffle(user_data_index)
+            len_user_data_index = len(user_data_index)
+            valid_size = int(len_user_data_index * valid_ratio)
+            test_size = int(len_user_data_index * test_ratio)
+            valid_index[c_id] = user_data_index[0:valid_size]
+            test_index[c_id] = user_data_index[len_user_data_index - test_size:]
+            train_index[c_id] = user_data_index[valid_size:len_user_data_index - test_size]
+    elif isinstance(user_data_indexes, list):
+        for i, user_data_index in enumerate(user_data_indexes):
+            np.random.shuffle(user_data_index)
+            len_user_data_index = len(user_data_index)
+            valid_size = int(len_user_data_index * valid_ratio)
+            test_size = int(len_user_data_index * test_ratio)
+            valid_index[i] = user_data_index[0:valid_size]
+            test_index[i] = user_data_index[len_user_data_index - test_size:]
+            train_index[i] = user_data_index[valid_size:len_user_data_index - test_size]
+
+    else:
+        raise TypeError("{} is unexpected data type".format(type(user_data_indexes)))
     return train_index, valid_index, test_index
 
 
-def partition_dataset(dataset: str, data_dir: str, data_augment: bool, iid: bool, n_parties,
-                      valid_prop=0, test_prop=0.2, beta=0.5, verbose=True):
+def partition_dataset(dataset: str, data_dir: str, data_augment: bool, p_method: dict, n_parties,
+                      valid_prop=0, test_prop=0.2, verbose=True):
     """
     Training part of the original dataset is allocated to multiple parties, each party manually
     divide the dataset into training / validation / testing data.
@@ -124,11 +138,10 @@ def partition_dataset(dataset: str, data_dir: str, data_augment: bool, iid: bool
     :param dataset: name of the dataset
     :param data_dir: path of dataset
     :param data_augment: if using data augmentation
-    :param iid: if using iid data
+    :param p_method: partition method
     :param n_parties: number of users
     :param valid_prop: proportion of validation data 0 <= v < 1
     :param test_prop: proportion of testing data 0 <= v < 1
-    :param beta: hyperparameter of Dirichlet distribution
     :param verbose: if printing the partitioned client data labels
     :return: train_dataset, test_dataset, train_user_idx, valid_user_idx, test_user_idx
     """
@@ -144,12 +157,15 @@ def partition_dataset(dataset: str, data_dir: str, data_augment: bool, iid: bool
     else:
         raise TypeError('{} is not an expected dataset !'.format(dataset))
 
-    assert iid in [True, False]
-    if iid:
+    assert p_method["iid"] in [True, False]
+    if p_method["iid"]:
         user_idx = iid_partition(train_dataset, n_parties)
     else:
-        user_idx = dirichlet_partition(train_dataset, n_parties, beta)
-        # user_idx = fix_class_noniid(train_dataset, n_parties, 2)
+        assert p_method["p_type"] in ["dirichlet", "fix_class"]
+        if p_method["p_type"] == "dirichlet":
+            user_idx = dirichlet_partition(train_dataset, n_parties, p_method["beta"])
+        else:
+            user_idx = fix_class_noniid(train_dataset, n_parties, p_method["n_classes"])
     train_user_idx, valid_user_idx, test_user_idx = split_train_valid_test(user_idx, valid_prop, test_prop)
 
     if verbose:
