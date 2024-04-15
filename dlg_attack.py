@@ -1,24 +1,17 @@
 import time
 import json
-import datetime
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
 
-from torch.utils.data import DataLoader
+import torch
 from torchvision import transforms
 
-from fleak.server import Server, serverdlg
+from fleak.server import serverdlg
 from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
-from fleak.data.partition import partition_dataset
-from fleak.data.image_dataset import ImageFolderDataset, CustomImageDataset
-
-
-
-
+from fleak.data.dataloader import generate_dataloaders
 
 
 setup = dict(device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)
@@ -30,48 +23,22 @@ def main(args):
     clients_per_round = int(args.total_clients * args.C)
 
     # ======= Prepare client Dataset ========
+    partition_method = dict(iid=args.iid,
+                            p_type=args.p_type,
+                            beta=args.beta,
+                            n_classes=args.num_classes_per_client)
     data_dir = args.data_path + args.dataset
-    combine_dataset, transform_train, transform_eval, train_user_idx, valid_user_idx, test_user_idx = \
-        partition_dataset(dataset=args.dataset,
-                          data_dir=data_dir,
-                          data_augment=False,
-                          iid=args.iid,
-                          n_parties=args.total_clients,
-                          valid_prop=args.valid_prop,
-                          test_prop=args.test_prop,
-                          beta=args.beta)
-    n_classes = len(set(np.array(combine_dataset.targets.cpu())))
-
-    # ======= Prepare partitioned Dataloader ========
-    if args.dataset == 'tiny_imagenet':
-        train_loaders = [
-            DataLoader(ImageFolderDataset(combine_dataset.samples[train_user_idx[i]], transform=transform_train),
-                       batch_size=args.batch_size, shuffle=True)
-            for i in range(args.total_clients)]
-        valid_loaders = [
-            DataLoader(ImageFolderDataset(combine_dataset.samples[valid_user_idx[i]], transform=transform_eval),
-                       batch_size=args.batch_size)
-            for i in range(args.total_clients)]
-        test_loaders = [
-            DataLoader(ImageFolderDataset(combine_dataset.samples[test_user_idx[i]], transform=transform_eval),
-                       batch_size=args.batch_size)
-            for i in range(args.total_clients)]
-    else:
-        train_loaders = [
-            DataLoader(CustomImageDataset(data=combine_dataset.data[train_user_idx[i]],
-                                          targets=combine_dataset.targets[train_user_idx[i]],
-                                          transform=transform_train), batch_size=args.batch_size, shuffle=True)
-            for i in range(args.total_clients)]
-        valid_loaders = [
-            DataLoader(CustomImageDataset(data=combine_dataset.data[valid_user_idx[i]],
-                                          targets=combine_dataset.targets[valid_user_idx[i]],
-                                          transform=transform_eval), batch_size=args.batch_size)
-            for i in range(args.total_clients)]
-        test_loaders = [
-            DataLoader(CustomImageDataset(data=combine_dataset.data[test_user_idx[i]],
-                                          targets=combine_dataset.targets[test_user_idx[i]],
-                                          transform=transform_eval), batch_size=args.batch_size)
-            for i in range(args.total_clients)]
+    train_loaders, valid_loaders, test_loaders, test_loader = generate_dataloaders(
+        dataset=args.dataset,
+        data_dir=data_dir,
+        data_augment=args.data_augment,
+        p_method=partition_method,
+        n_parties=args.total_clients,
+        valid_prop=args.valid_prop,
+        test_prop=args.test_prop,
+        batch_size=args.batch_size
+    )
+    n_classes = len(set(np.array(test_loader.dataset.targets)))
 
     # ======= Datasize ========
     if args.dataset == "cifar10":
@@ -97,7 +64,11 @@ def main(args):
     model = get_model_options(args.dataset)[args.model]
 
     # ======= Create Server ========
-    server = serverdlg.ServerDLG(global_model=model(n_classes), momentum=args.server_momentum, device=args.device, data_size=shape_img, label_size=label_size)
+    server = serverdlg.ServerDLG(global_model=model(n_classes),
+                                 momentum=args.server_momentum,
+                                 device=args.device,
+                                 data_size=shape_img,
+                                 label_size=label_size)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
@@ -218,12 +189,17 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', default='../federated_learning/data/',
                         type=str, help='path of the dataset')
     parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
-
+    parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')
     parser.add_argument('--iid', default=False, action='store_true', help='client dataset partition methods')
+    parser.add_argument('--p_type', type=str, default="dirichlet", choices=["dirichlet", "fix_class"],
+                        help='type of non-iid partition method')
     parser.add_argument('--beta', type=float, default=0.5,
                         help='The parameter for the dirichlet distribution for data partitioning')
+    parser.add_argument('--num_classes_per_client', type=int, default=2, choices=[2, 5, 20, 50, 100],
+                        help='number of data classes on one client')
+
     parser.add_argument('--save_results', default=False, action='store_true', help='if saving the results')
 
     parser.add_argument('--device', default='cuda:0', help='device')
