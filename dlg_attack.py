@@ -136,12 +136,12 @@ def main(args):
                     counter += 1
                     plt.subplot(10 * len(history), 10, counter)
                     # plt.imshow(_recon[j].permute(1,2,0).cpu())
-                    plt.show(tp(_recon[j].cpu()))
+                    plt.imshow(tp(_recon[j].cpu()))
                     plt.axis('off')
             else:
                 plt.subplot(10, 10, i + 1)
                 # plt.imshow(_recon[0].permute(1, 2, 0).cpu())
-                plt.show(tp(_recon[j].cpu()))
+                plt.imshow(tp(_recon[0].cpu()))
                 plt.axis('off')
     path = r'saved_results'
     if not os.path.exists(path):
