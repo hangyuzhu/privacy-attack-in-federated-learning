@@ -10,7 +10,7 @@ def criterion(pred, target):
     return torch.mean(torch.sum(- target * F.log_softmax(pred, dim=-1), 1))
 
 
-def generate_dummy_data_label(dummy: TorchDummy, device: str):
+def generate_dummy(dummy: TorchDummy, device: str):
     dummy_data = torch.randn(dummy.data_shape).to(device).requires_grad_(True)
     dummy_label = torch.randn(dummy.label_shape).to(device).requires_grad_(True)
     return dummy_data, dummy_label
@@ -30,7 +30,7 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu")
     """
     model.eval()
 
-    dummy_data, dummy_label = generate_dummy_data_label(dummy, device)
+    dummy_data, dummy_label = generate_dummy(dummy, device)
     optimizer = torch.optim.LBFGS([dummy_data, dummy_label])
 
     for iters in range(epochs):

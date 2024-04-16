@@ -115,6 +115,8 @@ def main(args):
         duration_time = time.time() - start_time
         print('One communication round training time: %.4fs' % duration_time)
 
+    tp = transforms.Compose([transforms.ToPILImage()])
+
     ## show reconstructions
     if args.dataset == 'mnist':
         for i, _recon in enumerate(history):
@@ -125,19 +127,21 @@ def main(args):
             plt.axis('off')
     else:
         for i, _recon in enumerate(history):
-            _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
-            _recon = _recon.to(dtype=torch.float32)
+            # _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
+            # _recon = _recon.to(dtype=torch.float32)
             plt.subplot(10, 10, i + 1)
             if _recon.shape[0]>1:
                 counter = 0
                 for j in range(_recon.shape[0]):
                     counter += 1
                     plt.subplot(10 * len(history), 10, counter)
-                    plt.imshow(_recon[j].permute(1,2,0).cpu())
+                    # plt.imshow(_recon[j].permute(1,2,0).cpu())
+                    plt.show(tp(_recon[j].cpu()))
                     plt.axis('off')
             else:
                 plt.subplot(10, 10, i + 1)
-                plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+                # plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+                plt.show(tp(_recon[j].cpu()))
                 plt.axis('off')
     path = r'saved_results'
     if not os.path.exists(path):
