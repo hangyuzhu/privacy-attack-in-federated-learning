@@ -130,9 +130,7 @@ class Server:
         self.global_model.load_state_dict(self.updates[0][-1])
 
         # if method == "DLG":
-        reconstruct_data = dlg(self.global_model, local_grads, self.dummy, 300, self.device)
-
-        return reconstruct_data
+        dlg(self.global_model, local_grads, self.dummy, 300, self.device)
 
     def save_model(self, path):
         # Save server model

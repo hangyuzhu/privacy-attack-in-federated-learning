@@ -3,8 +3,16 @@ from typing import Any, Tuple
 
 import torch
 from torch.utils.data import Dataset
+import torchvision
 from torchvision.datasets.folder import default_loader
 from torchvision import datasets, transforms
+
+
+class UnNormalize(torchvision.transforms.Normalize):
+    def __init__(self, mean, std, *args, **kwargs):
+        new_mean = [-m/s for m, s in zip(mean, std)]
+        new_std = [1/s for s in std]
+        super().__init__(new_mean, new_std, *args, **kwargs)
 
 
 class DatasetSplit(Dataset):

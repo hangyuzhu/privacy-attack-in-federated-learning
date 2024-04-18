@@ -3,7 +3,7 @@ import numpy as np
 from torchvision import transforms
 
 
-tp = transforms.Compose([transforms.ToPILImage()])
+DEFAULT_INVERSE_TRANSFORM = transforms.Compose([transforms.ToPILImage()])
 
 
 class TorchDummy:
@@ -13,10 +13,11 @@ class TorchDummy:
 
     """
 
-    def __init__(self, dataset, batch_size=1):
+    def __init__(self, dataset, batch_size=1, _it=DEFAULT_INVERSE_TRANSFORM):
         """
         :param dataset: torch Dataset
         :param batch_size: batch size of dummy data
+        :param _it: inverse transform
         """
         _data_shape = list(dataset.data.shape)
         # convert to channel first
@@ -27,6 +28,9 @@ class TorchDummy:
 
         self.n_classes: int = len(set(np.array(dataset.targets)))
         self._label_shape = [batch_size, self.n_classes]
+
+        self._it = _it
+
         # buffer
         self.history = []
 
@@ -38,8 +42,14 @@ class TorchDummy:
     def label_shape(self):
         return self._label_shape
 
-    def append(self, dummy_data: torch.Tensor):
-        self.history.append(tp(dummy_data.detach().cpu()))
+    def append(self, _dummy):
+        if isinstance(_dummy, list):
+            self.history.append([self._it(_dummy[0].detach().cpu()), _dummy[1]])
+        elif isinstance(_dummy, torch.Tensor):
+            self.history.append(self._it(_dummy.detach().cpu()))
+        else:
+            raise TypeError("{} is not an expected data type".format(type(_dummy)))
 
     def clear_buffer(self):
+        """ Clear the history buffer """
         self.history = []

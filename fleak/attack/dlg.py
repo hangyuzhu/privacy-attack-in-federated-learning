@@ -33,6 +33,9 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu")
     dummy_data, dummy_label = generate_dummy(dummy, device)
     optimizer = torch.optim.LBFGS([dummy_data, dummy_label])
 
+    best_score = torch.inf
+    best_dummy_data = dummy_data
+
     for iters in range(epochs):
         def closure():
             optimizer.zero_grad()
@@ -49,8 +52,16 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu")
 
             return grad_diff
 
-        optimizer.step(closure)
-    return dummy_data
+        # select the dummy data with the minimum loss value
+        loss = optimizer.step(closure)
+        if loss.item() < best_score:
+            best_score = loss.item()
+            best_dummy_data = dummy_data.detach().clone()
+
+        # save the history
+        dummy.append(best_dummy_data)
+
+    return best_dummy_data, dummy_label
 
 
 def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cpu"):

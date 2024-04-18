@@ -12,6 +12,7 @@ from fleak.server.dummy import TorchDummy
 from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
+from fleak.data.image_dataset import UnNormalize
 from fleak.data.dataloader import generate_dataloaders
 
 
@@ -39,7 +40,12 @@ def main(args):
         test_prop=args.test_prop,
         batch_size=args.batch_size
     )
-    dummy = TorchDummy(test_loader.dataset, batch_size=1)
+    it = transforms.Compose([
+        UnNormalize(dm, ds),
+        transforms.ToPILImage()
+    ])
+
+    dummy = TorchDummy(test_loader.dataset, 1, it)
     n_classes = dummy.n_classes
 
     # ======= Datasize ========
@@ -61,7 +67,7 @@ def main(args):
         label_size = [1, 10]
         num_class = 397
 
-    tt = transforms.ToPILImage()
+    # tt = transforms.ToPILImage()
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
 
@@ -107,8 +113,9 @@ def main(args):
 
 
         #attack
-        reconstruct_data = server.attack(method=args.attack)
-        history.append(reconstruct_data.clone().detach())
+        server.attack(method=args.attack)
+        # reconstruct_data = server.attack(method=args.attack)
+        # history.append(reconstruct_data.clone().detach())
 
         """before or after ?"""
         server.federated_averaging()
@@ -126,7 +133,7 @@ def main(args):
             plt.imshow(_recon[0].permute(1, 2, 0).cpu(), cmap='gray')
             plt.axis('off')
     else:
-        for i, _recon in enumerate(history):
+        for i, _recon in enumerate(dummy.history):
             # _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
             # _recon = _recon.to(dtype=torch.float32)
             plt.subplot(10, 10, i + 1)
@@ -141,8 +148,25 @@ def main(args):
             else:
                 plt.subplot(10, 10, i + 1)
                 # plt.imshow(_recon[0].permute(1, 2, 0).cpu())
-                plt.imshow(tp(_recon[0].cpu()))
+                plt.imshow(_recon)
                 plt.axis('off')
+        # for i, _recon in enumerate(history):
+        #     # _recon.mul_(ds).add_(dm).clamp_(min=0, max=1)
+        #     # _recon = _recon.to(dtype=torch.float32)
+        #     plt.subplot(10, 10, i + 1)
+        #     if _recon.shape[0]>1:
+        #         counter = 0
+        #         for j in range(_recon.shape[0]):
+        #             counter += 1
+        #             plt.subplot(10 * len(history), 10, counter)
+        #             # plt.imshow(_recon[j].permute(1,2,0).cpu())
+        #             plt.imshow(tp(_recon[j].cpu()))
+        #             plt.axis('off')
+        #     else:
+        #         plt.subplot(10, 10, i + 1)
+        #         # plt.imshow(_recon[0].permute(1, 2, 0).cpu())
+        #         plt.imshow(tp(_recon[0].cpu()))
+        #         plt.axis('off')
     path = r'saved_results'
     if not os.path.exists(path):
         os.makedirs(path)
