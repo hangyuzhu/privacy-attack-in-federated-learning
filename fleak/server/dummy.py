@@ -44,9 +44,9 @@ class TorchDummy:
 
     def append(self, _dummy):
         if isinstance(_dummy, list):
-            self.history.append([self._it(_dummy[0].detach().cpu()), _dummy[1]])
+            self.history.append([self._it(_dummy[0][0].cpu()), _dummy[1]])
         elif isinstance(_dummy, torch.Tensor):
-            self.history.append(self._it(_dummy.detach().cpu()))
+            self.history.append(self._it(_dummy[0].cpu()))
         else:
             raise TypeError("{} is not an expected data type".format(type(_dummy)))
 

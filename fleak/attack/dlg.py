@@ -11,7 +11,10 @@ def criterion(pred, target):
 
 
 def generate_dummy(dummy: TorchDummy, device: str):
-    dummy_data = torch.randn(dummy.data_shape).to(device).requires_grad_(True)
+    import math
+    dummy_data = torch.empty(dummy.data_shape).to(device).requires_grad_(True)
+    nn.init.kaiming_uniform_(dummy_data, a=math.sqrt(5))
+    # dummy_data = torch.randn(dummy.data_shape).to(device).requires_grad_(True)
     dummy_label = torch.randn(dummy.label_shape).to(device).requires_grad_(True)
     return dummy_data, dummy_label
 
@@ -58,8 +61,8 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu")
             best_score = loss.item()
             best_dummy_data = dummy_data.detach().clone()
 
-        # save the history
-        dummy.append(best_dummy_data)
+    # save the history
+    dummy.append(best_dummy_data)
 
     return best_dummy_data, dummy_label
 
