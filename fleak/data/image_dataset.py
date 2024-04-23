@@ -7,7 +7,33 @@ import torchvision
 from torchvision.datasets.folder import default_loader
 from torchvision import datasets, transforms
 
+nclasses_dict = {
+    "cifar10": 10,
+    "cifar100": 100,
+    "tiny_imagenet": 200,
+    "imagenet": 1000,
+}
 
+xshape_dict = {
+    "cifar10": [3, 32, 32],
+    "cifar100": [3, 32, 32],
+    "tiny_imagenet": [3, 64, 64],
+    "imagenet": [3, 224, 224],
+}
+
+ds_mean = {
+    "cifar10": [0.4914, 0.4822, 0.4465],
+    "cifar100": [0.5071, 0.4867, 0.4408],
+    "tiny_imagenet": [0.485, 0.456, 0.406],
+    "imagenet": [0.485, 0.456, 0.406],
+}
+
+ds_std = {
+    "cifar10": [0.2023, 0.1994, 0.2010],
+    "cifar100": [0.2675, 0.2565, 0.2761],
+    "tiny_imagenet": [0.229, 0.224, 0.225],
+    "imagenet": [0.229, 0.224, 0.225],
+}
 class UnNormalize(torchvision.transforms.Normalize):
     def __init__(self, mean, std, *args, **kwargs):
         new_mean = [-m/s for m, s in zip(mean, std)]
