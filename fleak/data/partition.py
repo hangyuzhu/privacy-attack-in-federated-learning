@@ -135,6 +135,7 @@ def partition_dataset(dataset: str, data_dir: str, data_augment: bool, p_method:
     Training part of the original dataset is allocated to multiple parties, each party manually
     divide the dataset into training / validation / testing data.
     Testing part of the original dataset is not partitioned
+
     :param dataset: name of the dataset
     :param data_dir: path of dataset
     :param data_augment: if using data augmentation
@@ -149,9 +150,9 @@ def partition_dataset(dataset: str, data_dir: str, data_augment: bool, p_method:
     if dataset == 'mnist':
         train_dataset, test_dataset = load_mnist_dataset(data_dir)
     elif dataset == 'cifar10':
-        train_dataset, test_dataset = load_cifar10_dataset(data_dir, data_augment)
+        train_dataset, test_dataset = load_cifar10_dataset(data_dir, data_augment=data_augment)
     elif dataset == 'cifar100':
-        train_dataset, test_dataset = load_cifar100_dataset(data_dir, data_augment)
+        train_dataset, test_dataset = load_cifar100_dataset(data_dir, data_augment=data_augment)
     elif dataset == 'tiny_imagenet':
         train_dataset, test_dataset = load_tiny_imagenet_dataset(data_dir)
     else:

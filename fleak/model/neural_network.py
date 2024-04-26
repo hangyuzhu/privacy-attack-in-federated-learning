@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from fleak.data.image_dataset import xshape_dict,nclasses_dict
+from fleak.data.image_dataset import IMAGE_SHAPE, N_CLASSES
 
 class MnistLeNet5(nn.Module):
     def __init__(self, num_classes):

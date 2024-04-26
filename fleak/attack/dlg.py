@@ -3,30 +3,30 @@ import torch.nn.functional as F
 import torch.nn as nn
 from collections import OrderedDict
 
-from ..server.dummy import TorchDummy
+from ..server.dummy import TorchDummyImage
 
 
 def criterion(pred, target):
     return torch.mean(torch.sum(- target * F.log_softmax(pred, dim=-1), 1))
 
 
-def generate_dummy(dummy: TorchDummy, device: str):
-    import math
-    dummy_data = torch.empty(dummy.data_shape).to(device).requires_grad_(True)
-    nn.init.kaiming_uniform_(dummy_data, a=math.sqrt(5))
-    # dummy_data = torch.randn(dummy.data_shape).to(device).requires_grad_(True)
+def generate_dummy(dummy: TorchDummyImage, device: str):
+    # import math
+    # dummy_data = torch.empty(dummy.data_shape).to(device).requires_grad_(True)
+    # nn.init.kaiming_uniform_(dummy_data, a=math.sqrt(5))
+    dummy_data = torch.randn(dummy.input_shape).to(device).requires_grad_(True)
     dummy_label = torch.randn(dummy.label_shape).to(device).requires_grad_(True)
     return dummy_data, dummy_label
 
 
-def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu"):
+def dlg(model, grads: OrderedDict, dummy: TorchDummyImage, epochs: int, device="cpu"):
     """ Deep Leakage Gradient
 
     https://proceedings.neurips.cc/paper/2019/file/60a6c4002cc7b29142def8871531281a-Paper.pdf
 
     :param model: dlg model
-    :param grads: model gradients of the ground truth data
-    :param dummy: TorchDummy object
+    :param grads: gradients of the ground truth data
+    :param dummy: TorchDummyImage object
     :param epochs: Number of epochs
     :param device: cpu or cuda
     :return: dummy data
@@ -35,9 +35,6 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu")
 
     dummy_data, dummy_label = generate_dummy(dummy, device)
     optimizer = torch.optim.LBFGS([dummy_data, dummy_label])
-
-    best_score = torch.inf
-    best_dummy_data = dummy_data
 
     for iters in range(epochs):
         def closure():
@@ -55,16 +52,12 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummy, epochs: int, device="cpu")
 
             return grad_diff
 
-        # select the dummy data with the minimum loss value
-        loss = optimizer.step(closure)
-        if loss.item() < best_score:
-            best_score = loss.item()
-            best_dummy_data = dummy_data.detach().clone()
+        optimizer.step(closure)
 
     # save the history
-    dummy.append(best_dummy_data)
+    dummy.append(dummy_data.detach())
 
-    return best_dummy_data, dummy_label
+    return dummy_data, dummy_label
 
 
 def idlg(global_model, local_grads, dummy_data, epochs=200, lr=0.075, device="cpu"):

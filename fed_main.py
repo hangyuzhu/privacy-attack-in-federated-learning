@@ -2,12 +2,12 @@ import time
 import json
 import datetime
 import os
-import numpy as np
 
 from fleak.server import Server
 from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
+from fleak.data.image_dataset import N_CLASSES
 from fleak.data.dataloader import generate_dataloaders
 
 
@@ -30,19 +30,18 @@ def main(args):
         test_prop=args.test_prop,
         batch_size=args.batch_size
     )
-    n_classes = len(set(np.array(test_loader.dataset.targets)))
 
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
 
     # ======= Create Server ========
-    server = Server(global_model=model(n_classes),
+    server = Server(global_model=model(N_CLASSES[args.dataset]),
                     test_loader=test_loader,
                     device=args.device)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
-                          client_model=model(n_classes),
+                          client_model=model(N_CLASSES[args.dataset]),
                           num_epochs=args.num_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,

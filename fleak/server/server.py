@@ -46,9 +46,9 @@ class Server:
         """
         Calculate the difference between the global model and uploaded local model
 
-        :param global_params: model parameters of the global model
-        :param local_params: model parameters of uploaded model
-        :return: the difference
+        :param global_params: parameters of the global model
+        :param local_params: parameters of uploaded model
+        :return: a dict containing tensor differences
         """
         diffs = OrderedDict()
         for (key, value) in local_params.items():

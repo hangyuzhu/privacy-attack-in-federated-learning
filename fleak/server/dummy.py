@@ -13,43 +13,48 @@ class TorchDummy:
 
     """
 
-    def __init__(self, dataset, batch_size=1, _it=DEFAULT_INVERSE_TRANSFORM):
-        """
-        :param dataset: torch Dataset
-        :param batch_size: batch size of dummy data
-        :param _it: inverse transform
-        """
-        _data_shape = list(dataset.data.shape)
-        # convert to channel first
-        _data_shape[1], _data_shape[-1] = _data_shape[-1], _data_shape[1]
-        # change the batch size
-        _data_shape[0] = batch_size
-        self._data_shape = _data_shape
-
-        self.n_classes: int = len(set(np.array(dataset.targets)))
-        self._label_shape = [batch_size, self.n_classes]
-
+    def __init__(self, _input_shape: list, _label_shape: list, _it=DEFAULT_INVERSE_TRANSFORM):
+        self._input_shape = _input_shape
+        self._label_shape = _label_shape
+        # inverse transform operator
         self._it = _it
-
         # buffer
         self.history = []
+        self.labels = []
 
     @property
-    def data_shape(self):
-        return self._data_shape
+    def input_shape(self):
+        return self._input_shape
 
     @property
     def label_shape(self):
         return self._label_shape
 
     def append(self, _dummy):
-        if isinstance(_dummy, list):
-            self.history.append([self._it(_dummy[0][0].cpu()), _dummy[1]])
-        elif isinstance(_dummy, torch.Tensor):
-            self.history.append(self._it(_dummy[0].cpu()))
-        else:
-            raise TypeError("{} is not an expected data type".format(type(_dummy)))
+        self.history.append(self._it(_dummy[0].cpu()))
+
+    def append_label(self, _label):
+        self.labels.append(_label)
 
     def clear_buffer(self):
         """ Clear the history buffer """
         self.history = []
+        self.labels = []
+
+
+class TorchDummyImage(TorchDummy):
+
+    def __init__(self, image_shape: list, n_classes: int, batch_size: int = 1, _it=DEFAULT_INVERSE_TRANSFORM):
+        # channel first image for pytorch
+        assert len(image_shape) == 3
+        # insert the batch dimension
+        image_shape.insert(0, batch_size)
+
+        self.n_classes = n_classes
+        # label shape [N, C]
+        label_shape = [batch_size, self.n_classes]
+        super().__init__(
+            _input_shape=image_shape,
+            _label_shape=label_shape,
+            _it=_it
+        )

@@ -12,7 +12,7 @@ from torchmetrics.functional import (
     peak_signal_noise_ratio,
     structural_similarity_index_measure,
 )
-from ..data.image_dataset import ds_mean,ds_std
+from ..data.image_dataset import IMAGE_MEAN, IMAGE_STD
 
 def label_to_onehot(target, num_classes=100):
     target = torch.unsqueeze(target, 1)

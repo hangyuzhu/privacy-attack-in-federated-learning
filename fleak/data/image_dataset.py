@@ -7,33 +7,43 @@ import torchvision
 from torchvision.datasets.folder import default_loader
 from torchvision import datasets, transforms
 
-nclasses_dict = {
+
+N_CLASSES = {
+    "mnist": 10,
     "cifar10": 10,
     "cifar100": 100,
     "tiny_imagenet": 200,
     "imagenet": 1000,
 }
 
-xshape_dict = {
+# channel first
+IMAGE_SHAPE = {
+    "mnist": [1, 28, 28],
     "cifar10": [3, 32, 32],
     "cifar100": [3, 32, 32],
     "tiny_imagenet": [3, 64, 64],
     "imagenet": [3, 224, 224],
 }
 
-ds_mean = {
+# mean
+IMAGE_MEAN = {
+    "mnist": [0.1307, ],
     "cifar10": [0.4914, 0.4822, 0.4465],
     "cifar100": [0.5071, 0.4867, 0.4408],
     "tiny_imagenet": [0.485, 0.456, 0.406],
     "imagenet": [0.485, 0.456, 0.406],
 }
 
-ds_std = {
+# std
+IMAGE_STD = {
+    "mnist": [0.3081, ],
     "cifar10": [0.2023, 0.1994, 0.2010],
     "cifar100": [0.2675, 0.2565, 0.2761],
     "tiny_imagenet": [0.229, 0.224, 0.225],
     "imagenet": [0.229, 0.224, 0.225],
 }
+
+
 class UnNormalize(torchvision.transforms.Normalize):
     def __init__(self, mean, std, *args, **kwargs):
         new_mean = [-m/s for m, s in zip(mean, std)]
@@ -84,71 +94,83 @@ class ImageFolderDataset(Dataset):
         return sample, target
 
 
-def load_mnist_dataset(data_dir):
+def load_mnist_dataset(data_dir, dm=None, ds=None):
+    if dm is None:
+        dm = IMAGE_MEAN["mnist"]
+    if ds is None:
+        ds = IMAGE_STD["mnist"]
     # ToTensor normalize images to 0 ~ 1
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
-        # transforms.Normalize((0.5,), (0.5,))
+        transforms.Normalize(dm, ds)
     ])
     train_dataset = datasets.MNIST(data_dir, train=True, download=True, transform=transform)
     test_dataset = datasets.MNIST(data_dir, train=False, transform=transform)
     return train_dataset, test_dataset
 
 
-def load_cifar10_dataset(data_dir, data_augment=False):
+def load_cifar10_dataset(data_dir, dm=None, ds=None, data_augment=False):
+    if dm is None:
+        dm = IMAGE_MEAN["cifar10"]
+    if ds is None:
+        ds = IMAGE_STD["cifar10"]
     if data_augment:
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize(dm, ds),
         ])
     else:
         transform_train = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize(dm, ds),
         ])
 
     transform_eval = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        transforms.Normalize(dm, ds),
     ])
     train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=transform_train)
     test_dataset = datasets.CIFAR10(data_dir, train=False, download=True, transform=transform_eval)
     return train_dataset, test_dataset
 
 
-def load_cifar100_dataset(data_dir, data_augment=False):
+def load_cifar100_dataset(data_dir, dm=None, ds=None, data_augment=False):
+    if dm is None:
+        dm = IMAGE_MEAN["cifar100"]
+    if ds is None:
+        ds = IMAGE_STD["cifar100"]
     if data_augment:
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.RandomRotation(15),
             transforms.ToTensor(),
-            transforms.Normalize((0.5070751592371323, 0.48654887331495095, 0.4409178433670343),
-                                 (0.2673342858792401, 0.2564384629170883, 0.27615047132568404))
+            transforms.Normalize(dm, ds)
         ])
     else:
         transform_train = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.5070751592371323, 0.48654887331495095, 0.4409178433670343),
-                                 (0.2673342858792401, 0.2564384629170883, 0.27615047132568404))
+            transforms.Normalize(dm, ds)
         ])
     transform_eval = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.5070751592371323, 0.48654887331495095, 0.4409178433670343),
-                             (0.2673342858792401, 0.2564384629170883, 0.27615047132568404))
+        transforms.Normalize(dm, ds)
     ])
     train_dataset = datasets.CIFAR100(data_dir, train=True, download=True, transform=transform_train)
     test_dataset = datasets.CIFAR100(data_dir, train=False, download=True, transform=transform_eval)
     return train_dataset, test_dataset
 
 
-def load_tiny_imagenet_dataset(data_dir):
+def load_tiny_imagenet_dataset(data_dir, dm=None, ds=None):
+    if dm is None:
+        dm = IMAGE_MEAN["tiny_imagenet"]
+    if ds is None:
+        ds = IMAGE_STD["tiny_imagenet"]
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        transforms.Normalize(dm, ds),
     ])
     train_dataset = datasets.ImageFolder(os.path.join(data_dir, 'train'), transform=transform)
     test_dataset = datasets.ImageFolder(os.path.join(data_dir, 'val'), transform=transform)
