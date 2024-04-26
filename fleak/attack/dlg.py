@@ -10,7 +10,7 @@ def criterion(pred, target):
     return torch.mean(torch.sum(- target * F.log_softmax(pred, dim=-1), 1))
 
 
-def generate_dummy(dummy: TorchDummyImage, device: str):
+def generate_dummy(dummy, device):
     # import math
     # dummy_data = torch.empty(dummy.data_shape).to(device).requires_grad_(True)
     # nn.init.kaiming_uniform_(dummy_data, a=math.sqrt(5))
