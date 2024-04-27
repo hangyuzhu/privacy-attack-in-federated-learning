@@ -129,8 +129,12 @@ class Server:
         # update global model
         self.global_model.load_state_dict(self.updates[0][-1])
 
-        # if method == "DLG":
-        dlg(self.global_model, local_grads, self.dummy, 300, self.device)
+        if method == "DLG":
+            dlg(self.global_model, local_grads, self.dummy, 300, self.device)
+        elif method == "iDLG":
+            idlg(self.global_model, local_grads, self.dummy, 300, 1.0, self.device)
+        else:
+            raise ValueError("Unexpected {} Attack Type.".format(method))
 
     def save_model(self, path):
         # Save server model

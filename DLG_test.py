@@ -79,7 +79,7 @@ net.apply(weights_init)
 criterion = cross_entropy_for_onehot
 
 ######### honest partipant #########
-img_index = 736
+img_index = 25
 gt_data = tp(dst[img_index][0]).to(device)
 gt_data = gt_data.view(1, *gt_data.size())
 gt_label = torch.Tensor([dst[img_index][1]]).long().to(device)

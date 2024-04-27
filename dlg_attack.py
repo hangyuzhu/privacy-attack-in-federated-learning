@@ -1,10 +1,6 @@
-import time
-import json
 import os
-import numpy as np
+import time
 import matplotlib.pyplot as plt
-
-import torch
 from torchvision import transforms
 
 from fleak.server import Server
@@ -97,9 +93,10 @@ def main(args):
         print('One communication round training time: %.4fs' % duration_time)
 
     # show reconstructions
-    for i, _recon in enumerate(dummy.history):
+    for i, (_recon, _label) in enumerate(zip(dummy.history, dummy.labels)):
         plt.subplot(10, 10, i + 1)
         plt.imshow(_recon)
+        plt.title("l=%d" % _label)
         plt.axis('off')
     path = r'saved_results'
     if not os.path.exists(path):

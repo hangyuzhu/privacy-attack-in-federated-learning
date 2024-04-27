@@ -162,10 +162,10 @@ dy_dx = torch.autograd.grad(y, net.parameters())
 original_dy_dx = list((_.detach().clone() for _ in dy_dx))
 
 # generate dummy data and label
-# dummy_data = torch.randn(gt_data.size()).to(device).requires_grad_(True)
+dummy_data = torch.randn(gt_data.size()).to(device).requires_grad_(True)
 dummy_label = torch.randn(gt_onehot_label.size()).to(device).requires_grad_(True)
-dummy_data = torch.empty(gt_data.size()).to(device).requires_grad_(True)
-nn.init.kaiming_uniform_(dummy_data, a=math.sqrt(5))
+# dummy_data = torch.empty(gt_data.size()).to(device).requires_grad_(True)
+# nn.init.kaiming_uniform_(dummy_data, a=math.sqrt(5))
 # dummy_label = torch.empty(gt_onehot_label.size()).to(device).requires_grad_(True)
 # nn.init.kaiming_uniform_(dummy_label, a=math.sqrt(5))
 # dummy_label = gt_onehot_label.clone().to(device).requires_grad_(True)
