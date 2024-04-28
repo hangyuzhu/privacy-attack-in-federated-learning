@@ -1,7 +1,7 @@
 import math
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
 from collections import OrderedDict
 
 from ..server.dummy import TorchDummyImage
@@ -115,7 +115,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
 
     # save the dummy data
     dummy.append(dummy_data.detach())
-    # save the dummy label
-    dummy.append_label(torch.argmax(dummy_label, dim=-1).item())
+    # save the label prediction calculated by iDLG
+    dummy.append_label(label_pred)
 
     return dummy_data, label_pred
