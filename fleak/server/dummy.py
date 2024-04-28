@@ -51,8 +51,4 @@ class TorchDummyImage(TorchDummy):
         self.n_classes = n_classes
         # label shape [N, C]
         label_shape = [batch_size, self.n_classes]
-        super().__init__(
-            _input_shape=image_shape,
-            _label_shape=label_shape,
-            _it=_it
-        )
+        super().__init__(_input_shape=image_shape, _label_shape=label_shape, _it=_it)
