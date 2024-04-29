@@ -1,7 +1,7 @@
 import torch
 
 from .server import Server
-from ..attack.dlg import dlg, idlg
+from ..attack.DLG import dlg, idlg
 from ..attack.inverting import ig, ig_weight, ig_multiple
 from ..attack.robbing_the_fed import robbing
 from ..model.gan_network import MnistGenerator, Cifar10Generator

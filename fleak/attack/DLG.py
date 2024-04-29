@@ -93,6 +93,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
     dummy_data, dummy_label = generate_dummy(dummy, device)
     optimizer = torch.optim.LBFGS([dummy_data], lr=lr)
 
+    # extract ground-truth labels proposed by iDLG
     label_pred = torch.argmin(torch.sum(list(grads.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
     idlg_criterion = nn.CrossEntropyLoss().to(device)
 
@@ -115,7 +116,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
 
     # save the dummy data
     dummy.append(dummy_data.detach())
-    # save the label prediction calculated by iDLG
+    # save the label prediction
     dummy.append_label(label_pred)
 
     return dummy_data, label_pred

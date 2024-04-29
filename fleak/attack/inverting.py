@@ -2,7 +2,7 @@ import torch
 from .inverting_class import GradientReconstructor,FedAvgReconstructor
 
 
-def ig(local_model, local_gradients, device="cpu"):
+def ig(model, grads, device="cpu"):
     """
     Inverting Gradients: https://proceedings.neurips.cc/paper/2020/file/c4ede56bbd98819ae6112b20ac6bf145-Paper.pdf
     :param local_model: uploaded local model
@@ -15,11 +15,11 @@ def ig(local_model, local_gradients, device="cpu"):
     dm = torch.as_tensor([0.4914, 0.4822, 0.4465], device=device, dtype=torch.float32)[None, :, None, None]
     ds = torch.as_tensor([0.2023, 0.1994, 0.2010], device=device, dtype=torch.float32)[None, :, None, None]
 
-    local_model.zero_grad()
+    model.zero_grad()
     # --------------------------------------------------
     # generate_data = dummy_data.detach()
     # --------------------------------------------------
-    label_pred = torch.argmin(torch.sum(list(local_gradients.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
+    label_pred = torch.argmin(torch.sum(list(grads.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
     config = dict(signed=True,
                   boxed=True,
                   cost_fn='sim',
