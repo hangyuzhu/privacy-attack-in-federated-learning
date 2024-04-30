@@ -1,34 +1,9 @@
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 
-from ..server.dummy import TorchDummyImage
-
-
-def criterion(pred, target):
-    return torch.mean(torch.sum(- target * F.log_softmax(pred, dim=-1), 1))
-
-
-def generate_dummy_k(dummy, device):
-    """ Generate dummy data with Kaiming initialization
-
-     This may be helpful for stable generation
-
-     """
-    dummy_data = torch.empty(dummy.input_shape).to(device).requires_grad_(True)
-    # equivalent to the default initialization of pytorch
-    nn.init.kaiming_uniform_(dummy_data, a=math.sqrt(5))
-    dummy_label = torch.empty(dummy.label_shape).to(device).requires_grad_(True)
-    nn.init.kaiming_uniform_(dummy_label, a=math.sqrt(5))
-    return dummy_data, dummy_label
-
-
-def generate_dummy(dummy, device):
-    dummy_data = torch.randn(dummy.input_shape).to(device).requires_grad_(True)
-    dummy_label = torch.randn(dummy.label_shape).to(device).requires_grad_(True)
-    return dummy_data, dummy_label
+from fleak.attack.dummy import TorchDummyImage
 
 
 def dlg(model, grads: OrderedDict, dummy: TorchDummyImage, epochs: int, device="cpu"):
@@ -45,7 +20,8 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummyImage, epochs: int, device="
     """
     model.eval()
 
-    dummy_data, dummy_label = generate_dummy(dummy, device)
+    dummy_data = dummy.generate_dummy_input(device)
+    dummy_label = dummy.generate_dummy_label(device)
     optimizer = torch.optim.LBFGS([dummy_data, dummy_label])  # default lr=1.0
 
     for iters in range(epochs):
@@ -54,7 +30,7 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummyImage, epochs: int, device="
 
             dummy_pred = model(dummy_data)
             dummy_onehot_label = F.softmax(dummy_label, dim=-1)
-            dummy_loss = criterion(dummy_pred, dummy_onehot_label)
+            dummy_loss = torch.mean(torch.sum(-dummy_onehot_label * F.log_softmax(dummy_pred, dim=-1), 1))
             dummy_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
             grad_diff = 0
@@ -90,19 +66,19 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
     """
     model.eval()
 
-    dummy_data, dummy_label = generate_dummy(dummy, device)
-    optimizer = torch.optim.LBFGS([dummy_data], lr=lr)
-
+    dummy_data = dummy.generate_dummy_input(device)
     # extract ground-truth labels proposed by iDLG
     label_pred = torch.argmin(torch.sum(list(grads.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
-    idlg_criterion = nn.CrossEntropyLoss().to(device)
+
+    optimizer = torch.optim.LBFGS([dummy_data], lr=lr)
+    criterion = nn.CrossEntropyLoss().to(device)
 
     for iters in range(epochs):
         def closure():
             optimizer.zero_grad()
 
             dummy_pred = model(dummy_data)
-            dummy_loss = idlg_criterion(dummy_pred, label_pred)
+            dummy_loss = criterion(dummy_pred, label_pred)
             dummy_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
             grad_diff = 0

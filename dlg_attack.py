@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 
 from fleak.server import Server
-from fleak.server.dummy import TorchDummyImage
 from fleak.client import Client
+from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
 from fleak.data.image_dataset import UnNormalize, N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
@@ -31,18 +31,15 @@ def main(args):
         test_prop=args.test_prop,
         batch_size=args.batch_size
     )
-    # Assume the attacker holds the mean and std of the training data
-    # However, this is a very strong assumption
-    it = transforms.Compose([
-        UnNormalize(IMAGE_MEAN[args.dataset], IMAGE_STD[args.dataset]),
-        transforms.ToPILImage()
-    ])
 
-    # recovery batch size set to 1
+    # Assume the attacker holds the mean and std of the training data
     dummy = TorchDummyImage(
         image_shape=IMAGE_SHAPE[args.dataset],
+        batch_size=1,
         n_classes=N_CLASSES[args.dataset],
-        _it=it
+        dm=IMAGE_MEAN[args.dataset],
+        ds=IMAGE_STD[args.dataset],
+        device=args.device,
     )
     n_classes = dummy.n_classes
 
@@ -72,7 +69,6 @@ def main(args):
     start = time.time()
     eval_accuracy = []
 
-    plt.figure(figsize=(12, 8))
     for i in range(args.num_rounds):
         # check if the communication round is correct or not
         assert i == server.cur_round
@@ -93,8 +89,9 @@ def main(args):
         print('One communication round training time: %.4fs' % duration_time)
 
     # show reconstructions
+    plt.figure(figsize=(12, 8))
     for i, (_recon, _label) in enumerate(zip(dummy.history, dummy.labels)):
-        plt.subplot(10, 10, i + 1)
+        plt.subplot(3, 10, i + 1)
         plt.imshow(_recon)
         plt.title("l=%d" % _label)
         plt.axis('off')

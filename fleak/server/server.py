@@ -4,7 +4,7 @@ import numpy as np
 from collections import OrderedDict
 
 from ..attack.DLG import dlg, idlg
-from ..attack.inverting import ig, ig_weight, ig_multiple
+from ..attack.IG import Single, ig_weight, ig_multiple
 from ..attack.robbing_the_fed import robbing
 from ..model.gan_network import MnistGenerator, Cifar10Generator
 from ..attack.GGL import GGLreconstruction
@@ -120,7 +120,7 @@ class Server:
 
     def attack(self, method="DLG"):
         """
-        Randomly select a client to attack from scratch
+        Randomly select a client to infer its private data
 
         :param method: attack method
         :return: reconstructed data and labels
@@ -133,6 +133,8 @@ class Server:
             dlg(self.global_model, local_grads, self.dummy, 300, self.device)
         elif method == "iDLG":
             idlg(self.global_model, local_grads, self.dummy, 300, 1.0, self.device)
+        elif method == "IG":
+            Single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
         else:
             raise ValueError("Unexpected {} Attack Type.".format(method))
 
