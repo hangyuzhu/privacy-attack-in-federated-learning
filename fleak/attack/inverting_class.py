@@ -248,52 +248,97 @@ class FedAvgReconstructor(GradientReconstructor):
             return self.inception(x_trial)
 
 
+# def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
+#     optimizer = SGD(model.parameters(), lr=lr)
+#     if use_updates:
+#         patched_model_origin = deepcopy(model.state_dict())
+#     for i in range(local_steps):
+#         # if batch_size == 0:
+#         #     outputs = patched_model(inputs, patched_model.parameters)
+#         #     labels_ = labels
+#         # else:
+#         #     idx = i % (inputs.shape[0] // batch_size)
+#         #     outputs = patched_model(inputs[idx * batch_size:(idx + 1) * batch_size], patched_model.parameters)
+#         #     labels_ = labels[idx * batch_size:(idx + 1) * batch_size]
+#         optimizer.zero_grad()
+#         outputs = model(inputs)
+#         labels_ = labels
+#
+#         loss = loss_fn(outputs, labels_).sum()
+#         # loss.backward(create_graph=True)
+#         loss.backward()
+#         optimizer.step()
+#
+#         # patched_model.parameters = OrderedDict((name, param - lr * grad_part)
+#         #                                        for ((name, param), grad_part)
+#         #                                        in zip(patched_model.parameters.items(), grad))
+#
+#     if use_updates:
+#         patched_model = OrderedDict()
+#         for ((name, param), (name_origin, param_origin)) in zip(model.state_dict().items(), patched_model_origin.items()):
+#             patched_model[name] = param_origin - param
+#     return list(patched_model.values())
+
+# def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
+#     """Take a few gradient descent steps to fit the model to the given input."""
+#     patched_model = MetaMonkey(model)
+#     if use_updates:
+#         patched_model_origin = deepcopy(patched_model)
+#     for i in range(local_steps):
+#         if batch_size == 0:
+#             outputs = patched_model(inputs, patched_model.parameters)
+#             labels_ = labels
+#         else:
+#             idx = i % (inputs.shape[0] // batch_size)
+#             outputs = patched_model(inputs[idx * batch_size:(idx + 1) * batch_size], patched_model.parameters)
+#             labels_ = labels[idx * batch_size:(idx + 1) * batch_size]
+#         loss = loss_fn(outputs, labels_).sum()
+#         grad = torch.autograd.grad(loss, patched_model.parameters.values(), create_graph=True)
+#
+#         patched_model.parameters = OrderedDict((name, param - lr * grad_part)
+#                                                for ((name, param), grad_part)
+#                                                in zip(patched_model.parameters.items(), grad))
+#
+#     if use_updates:
+#         patched_model.parameters = OrderedDict((name, param - param_origin)
+#                                                for ((name, param), (name_origin, param_origin))
+#                                                in zip(patched_model.parameters.items(), patched_model_origin.parameters.items()))
+#     return list(patched_model.parameters.values())
+
+
 def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
-    optimizer = SGD(model.parameters(), lr=lr)
-    if use_updates:
-        patched_model_origin = deepcopy(model.state_dict())
+    patched_model = deepcopy(model)
+    accum_grads = []
+    for p in patched_model.parameters():
+        accum_grads.append(torch.zeros_like(p))
+
     for i in range(local_steps):
-        # if batch_size == 0:
-        #     outputs = patched_model(inputs, patched_model.parameters)
-        #     labels_ = labels
-        # else:
-        #     idx = i % (inputs.shape[0] // batch_size)
-        #     outputs = patched_model(inputs[idx * batch_size:(idx + 1) * batch_size], patched_model.parameters)
-        #     labels_ = labels[idx * batch_size:(idx + 1) * batch_size]
-        optimizer.zero_grad()
-        outputs = model(inputs)
+        outputs = patched_model(inputs)
         labels_ = labels
-
         loss = loss_fn(outputs, labels_).sum()
-        loss.backward(create_graph=True)
-        optimizer.step()
+        grad = torch.autograd.grad(loss, patched_model.parameters(), create_graph=True)
 
-        # patched_model.parameters = OrderedDict((name, param - lr * grad_part)
-        #                                        for ((name, param), grad_part)
-        #                                        in zip(patched_model.parameters.items(), grad))
+        for i, p in enumerate(patched_model.parameters()):
+            p.data -= lr * grad[i].data
+            accum_grads[i] += lr * grad[i]
 
-    if use_updates:
-        patched_model = OrderedDict()
-        for ((name, param), (name_origin, param_origin)) in zip(model.state_dict().items(), patched_model_origin.items()):
-            patched_model[name] = param_origin - param
-    return list(patched_model.values())
+    return accum_grads
 
 
 # def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
-#     patched_model = deepcopy(model)
-#     accum_grads = []
-#     for p in patched_model.parameters():
-#         accum_grads.append(torch.zeros_like(p))
+#     model_origin = deepcopy(model.state_dict())
+#     accum_grads = [torch.zeros_like(p) for p in model.parameters()]
 #
 #     for i in range(local_steps):
-#         outputs = patched_model(inputs)
+#         outputs = model(inputs)
 #         labels_ = labels
 #         loss = loss_fn(outputs, labels_).sum()
-#         grad = torch.autograd.grad(loss, patched_model.parameters(), create_graph=True)
+#         grad = torch.autograd.grad(loss, model.parameters(), create_graph=True)
 #
-#         for i, p in enumerate(patched_model.parameters()):
+#         for i, p in enumerate(model.parameters()):
 #             p.data -= lr * grad[i].data
 #             accum_grads[i] += lr * grad[i]
+#     model.load_state_dict(model_origin)
 #
 #     return accum_grads
 

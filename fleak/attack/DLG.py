@@ -1,19 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from collections import OrderedDict
 
-from fleak.attack.dummy import TorchDummyImage
+from fleak.attack.dummy import TorchDummy
 
 
-def dlg(model, grads: OrderedDict, dummy: TorchDummyImage, epochs: int, device="cpu"):
+def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
     """ Deep Leakage Gradient
 
     https://proceedings.neurips.cc/paper/2019/file/60a6c4002cc7b29142def8871531281a-Paper.pdf
 
     :param model: dlg model
     :param grads: gradients of the ground truth data
-    :param dummy: TorchDummyImage object
+    :param dummy: TorchDummy object
     :param epochs: Number of epochs
     :param device: cpu or cuda
     :return: dummy data
@@ -34,7 +33,7 @@ def dlg(model, grads: OrderedDict, dummy: TorchDummyImage, epochs: int, device="
             dummy_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
             grad_diff = 0
-            for dummy_g, origin_g in zip(dummy_dy_dx, grads.values()):
+            for dummy_g, origin_g in zip(dummy_dy_dx, grads):
                 grad_diff += ((dummy_g - origin_g)**2).sum()
             grad_diff.backward()
 
@@ -68,7 +67,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
 
     dummy_data = dummy.generate_dummy_input(device)
     # extract ground-truth labels proposed by iDLG
-    label_pred = torch.argmin(torch.sum(list(grads.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
+    label_pred = torch.argmin(torch.sum(grads[-2], dim=-1), dim=-1).detach().reshape((1,))
 
     optimizer = torch.optim.LBFGS([dummy_data], lr=lr)
     criterion = nn.CrossEntropyLoss().to(device)
@@ -82,7 +81,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
             dummy_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
             grad_diff = 0
-            for dummy_g, origin_g in zip(dummy_dy_dx, grads.values()):
+            for dummy_g, origin_g in zip(dummy_dy_dx, grads):
                 grad_diff += ((dummy_g - origin_g) ** 2).sum()
             grad_diff.backward()
 

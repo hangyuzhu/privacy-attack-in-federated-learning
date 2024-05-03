@@ -41,18 +41,10 @@ class Server:
         num_clients = min(num_clients, len(possible_clients))
         self.selected_clients = np.random.choice(possible_clients, num_clients, replace=False)
 
-    @staticmethod
-    def _subtract(global_params, local_params):
-        """
-        Calculate the difference between the global model and uploaded local model
-
-        :param global_params: parameters of the global model
-        :param local_params: parameters of uploaded model
-        :return: a dict containing tensor differences
-        """
-        diffs = OrderedDict()
-        for (key, value) in local_params.items():
-            diffs[key] = global_params[key] - local_params[key]
+    def extract_gradients(self, local_params):
+        # avoid computing running statistics
+        # detach is adopted to cut off grad_fn
+        diffs = [(v - local_params[k]).detach() for k, v in self.global_model.named_parameters()]
         return diffs
 
     def train_eval(self, clients=None, set_to_use='test'):
@@ -125,7 +117,7 @@ class Server:
         :param method: attack method
         :return: reconstructed data and labels
         """
-        local_grads = self._subtract(self.global_model.state_dict(), self.updates[0][-1])
+        local_grads = self.extract_gradients(self.updates[0][-1])
         # update global model
         self.global_model.load_state_dict(self.updates[0][-1])
 
@@ -134,7 +126,10 @@ class Server:
         elif method == "iDLG":
             idlg(self.global_model, local_grads, self.dummy, 300, 1.0, self.device)
         elif method == "IG":
-            Single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
+            # Single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
+            output, label_pred = ig_weight(self.global_model, local_grads, self.device)
+            self.dummy.append(output.detach())
+            self.dummy.append_label(label_pred)
         else:
             raise ValueError("Unexpected {} Attack Type.".format(method))
 
