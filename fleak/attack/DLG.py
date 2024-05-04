@@ -5,6 +5,11 @@ import torch.nn.functional as F
 from fleak.attack.dummy import TorchDummy
 
 
+def dummy_criterion(dummy_pred, dummy_label):
+    dummy_onehot_label = F.softmax(dummy_label, dim=-1)
+    return torch.mean(torch.sum(- dummy_onehot_label * F.log_softmax(dummy_pred, dim=-1), 1))
+
+
 def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
     """ Deep Leakage Gradient
 
@@ -22,14 +27,14 @@ def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
     dummy_data = dummy.generate_dummy_input(device)
     dummy_label = dummy.generate_dummy_label(device)
     optimizer = torch.optim.LBFGS([dummy_data, dummy_label])  # default lr=1.0
+    criterion = dummy_criterion
 
     for iters in range(epochs):
         def closure():
             optimizer.zero_grad()
 
             dummy_pred = model(dummy_data)
-            dummy_onehot_label = F.softmax(dummy_label, dim=-1)
-            dummy_loss = torch.mean(torch.sum(-dummy_onehot_label * F.log_softmax(dummy_pred, dim=-1), 1))
+            dummy_loss = criterion(dummy_pred, dummy_label)
             dummy_dy_dx = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
             grad_diff = 0

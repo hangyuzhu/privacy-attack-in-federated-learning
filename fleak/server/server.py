@@ -4,7 +4,7 @@ import numpy as np
 from collections import OrderedDict
 
 from ..attack.DLG import dlg, idlg
-from ..attack.IG import Single, ig_weight, ig_multiple
+from ..attack.IG import ig_single, ig_weight, ig_multiple
 from ..attack.robbing_the_fed import robbing
 from ..model.gan_network import MnistGenerator, Cifar10Generator
 from ..attack.GGL import GGLreconstruction
@@ -42,8 +42,14 @@ class Server:
         self.selected_clients = np.random.choice(possible_clients, num_clients, replace=False)
 
     def extract_gradients(self, local_params):
-        # avoid computing running statistics
-        # detach is adopted to cut off grad_fn
+        """ Extract the gradients of any client model
+
+        Using named_parameters to avoid incorrect computation upon running statistics
+        Caution: .detach() is adopted here to cut off the grad_fn
+
+        :param local_params: client model parameters
+        :return:
+        """
         diffs = [(v - local_params[k]).detach() for k, v in self.global_model.named_parameters()]
         return diffs
 
@@ -110,7 +116,7 @@ class Server:
         # clear uploads buffer
         self.updates = []
 
-    def attack(self, method="DLG"):
+    def attack(self, method):
         """
         Randomly select a client to infer its private data
 
@@ -121,15 +127,14 @@ class Server:
         # update global model
         self.global_model.load_state_dict(self.updates[0][-1])
 
-        if method == "DLG":
+        if method == "dlg":
             dlg(self.global_model, local_grads, self.dummy, 300, self.device)
-        elif method == "iDLG":
+        elif method == "idlg":
             idlg(self.global_model, local_grads, self.dummy, 300, 1.0, self.device)
-        elif method == "IG":
-            # Single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
-            output, label_pred = ig_weight(self.global_model, local_grads, self.device)
-            self.dummy.append(output.detach())
-            self.dummy.append_label(label_pred)
+        elif method == "ig_single":
+            ig_single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
+        elif method == "ig_weight":
+            ig_weight(self.global_model, local_grads, self.dummy, 8000, 0.1, 2, 0.1, 1e-6, self.device)
         else:
             raise ValueError("Unexpected {} Attack Type.".format(method))
 

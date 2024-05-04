@@ -16,7 +16,7 @@ N_CLASSES = {
     "imagenet": 1000,
 }
 
-# channel first
+# channel first for pytorch
 IMAGE_SHAPE = {
     "mnist": [1, 28, 28],
     "cifar10": [3, 32, 32],
@@ -45,6 +45,8 @@ IMAGE_STD = {
 
 
 class UnNormalize(torchvision.transforms.Normalize):
+    """ Inverse normalize operation """
+
     def __init__(self, mean, std, *args, **kwargs):
         new_mean = [-m/s for m, s in zip(mean, std)]
         new_std = [1/s for s in std]
@@ -52,6 +54,7 @@ class UnNormalize(torchvision.transforms.Normalize):
 
 
 class DatasetSplit(Dataset):
+
     def __init__(self, dataset, idxs):
         self.dataset = dataset
         self.idxs = list(idxs)

@@ -7,7 +7,7 @@ from fleak.server import Server
 from fleak.client import Client
 from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
-from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
+from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY, ATTACKS
 from fleak.data.image_dataset import UnNormalize, N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
 from fleak.data.dataloader import generate_dataloaders
 
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cuda:0', help='device')
     parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
 
-    parser.add_argument('--attack', default='DLG', help='the attack type')
+    parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
 
     args = parser.parse_args()
     print('\n============== Federated Learning Setting ==============')

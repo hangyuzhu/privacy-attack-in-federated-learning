@@ -20,13 +20,17 @@ class TorchDummy:
             self,
             _input_shape: list,
             _label_shape: list,
+            batch_size: int,
             dm: Union[list, tuple],
             ds: Union[list, tuple],
             device: str
     ):
+        assert _input_shape[0] == batch_size
+        assert _label_shape[0] == batch_size
         self.device = device
         self._input_shape = _input_shape
         self._label_shape = _label_shape
+        self.batch_size = batch_size
 
         self.dm = dm
         self.ds = ds
@@ -100,6 +104,7 @@ class TorchDummyImage(TorchDummy):
         super().__init__(
             _input_shape=image_shape,
             _label_shape=label_shape,
+            batch_size=batch_size,
             dm=dm,
             ds=ds,
             device=device,
