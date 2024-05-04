@@ -1,6 +1,5 @@
 import os
 import time
-import matplotlib.pyplot as plt
 
 from fleak.server import ServerAttacker
 from fleak.client import Client
@@ -9,6 +8,7 @@ from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY, ATTACKS
 from fleak.data.image_dataset import UnNormalize, N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
 from fleak.data.dataloader import generate_dataloaders
+from fleak.utils.plot import plot_dummy_images
 
 
 def main(args):
@@ -90,21 +90,7 @@ def main(args):
         print('One communication round training time: %.4fs' % duration_time)
 
     # show reconstructions
-    plt.figure(figsize=(12, 8))
-    for i, (_recon, _label) in enumerate(zip(dummy.history, dummy.labels)):
-        plt.subplot(3, 10, i + 1)
-        plt.imshow(_recon)
-        plt.title("l=%d" % _label)
-        plt.axis('off')
-    path = r'saved_results'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    if args.iid == True:
-        plt.savefig(os.path.join(path, args.attack + args.dataset + str(args.total_clients) + str(args.num_epochs) + str(args.batch_size) + '_fake_image.png'))
-    else:
-        plt.savefig(os.path.join(path, args.attack + 'noniid' + args.dataset + str(args.total_clients) + str(args.num_epochs) + str(args.batch_size) + '_fake_image.png'))
-
-    plt.show()
+    plot_dummy_images(dummy, args)
     # final eval acc
     eval_acc = server.evaluate(set_to_use=args.set_to_use)
     eval_accuracy.append(eval_acc)

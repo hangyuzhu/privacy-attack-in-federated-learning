@@ -1,13 +1,6 @@
 import torch
 import copy
 import numpy as np
-from collections import OrderedDict
-
-from ..attack.DLG import dlg, idlg
-from ..attack.IG import ig_single, ig_weight, ig_multiple
-from ..attack.robbing_the_fed import robbing
-from ..model.gan_network import MnistGenerator, Cifar10Generator
-from ..attack.GGL import GGLreconstruction
 
 
 class Server:
@@ -42,7 +35,7 @@ class Server:
     def extract_gradients(self, local_params):
         """ Extract the gradients of any client model
 
-        Using named_parameters to avoid incorrect computation upon running statistics
+        Using named_parameters to avoid incorrect computation with running statistics
         Caution: .detach() is adopted here to cut off the grad_fn
 
         :param local_params: client model parameters

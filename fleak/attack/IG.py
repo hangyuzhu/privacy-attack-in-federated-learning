@@ -12,18 +12,21 @@ from collections import OrderedDict
 
 from .DLG import dummy_criterion
 from ..model import MetaModel
-# from .inverting_class import FedAvgReconstructor
 
 
 def ig_single(model, grads, dummy, epochs=4000, lr=0.1, alpha=1e-6, device="cpu"):
-    """ Recover a single image from single gradients
+    """Reconstruct an image from single gradients
 
     Similar to DLG based methods but adopting cosine similarity as the loss function
 
     :param model: inferred model
-    :param grads: gradients of the ground truth data
+    :param grads: gradients of the ground-truth data
+    :param dummy: TorchDummy object
+    :param epochs: number of reconstruct epochs
+    :param lr: reconstruct learning rate
+    :param alpha: hyperparameter for TV term
     :param device: cpu or cuda
-    :return: reconstructed data and labels
+    :return: dummy data & dummy label
     """
     model.eval()
 
@@ -37,6 +40,21 @@ def ig_single(model, grads, dummy, epochs=4000, lr=0.1, alpha=1e-6, device="cpu"
 
 
 def ig_weight(model, grads, dummy, epochs, lr, local_epochs, local_lr, alpha, device="cpu"):
+    """Reconstruct an image from weights after several SGD steps
+
+    Dummy gradients are simulated by multiple steps of SGD
+
+    :param model: inferred model
+    :param grads: gradients of the ground-truth data
+    :param dummy: TorchDummy object
+    :param epochs: number of reconstruct epochs
+    :param lr: reconstruct learning rate
+    :param local_epochs: number of epochs for client training
+    :param local_lr: learning rate for client training
+    :param alpha: hyperparameter for TV term
+    :param device: cpu or cuda
+    :return: dummy data & dummy label
+    """
     model.eval()
 
     reconstructor = FedAvgReconstructor(model, dummy, epochs, lr, local_epochs, local_lr, alpha, device)
@@ -67,6 +85,9 @@ class GradientReconstructor:
         self.alpha = alpha
         self.device = device
 
+        # if converting labels to integers
+        self.convert_label = False
+
     def reconstruct(self, gt_grads):
         # generate dummy data with Gaussian distribution
         dummy_data = self.dummy.generate_dummy_input(self.device)
@@ -79,6 +100,7 @@ class GradientReconstructor:
             optimizer = optim.Adam([dummy_data], lr=self.lr)
             criterion = nn.CrossEntropyLoss().to(self.device)
         else:
+            self.convert_label = True
             # DLG label recovery
             # dummy labels should be simultaneously updated
             dummy_label = self.dummy.generate_dummy_label(self.device)
@@ -103,6 +125,9 @@ class GradientReconstructor:
                     torch.min(dummy_data, (1 - self.dummy.t_dm) / self.dummy.t_ds), -self.dummy.t_dm / self.dummy.t_ds)
                 if i + 1 == self.epochs:
                     print(f'Epoch: {i + 1}. Rec. loss: {rec_loss.item():2.4f}.')
+
+        if self.convert_label:
+            return dummy_data.detach(), torch.argmax(dummy_label, dim=-1)
 
         return dummy_data.detach(), dummy_label
 
@@ -238,30 +263,6 @@ def total_variation(x):
     dx = torch.mean(torch.abs(x[:, :, :, :-1] - x[:, :, :, 1:]))
     dy = torch.mean(torch.abs(x[:, :, :-1, :] - x[:, :, 1:, :]))
     return dx + dy
-
-
-# def ig_weight(local_model, local_gradients, device="cpu"):
-#     dm = torch.as_tensor([0.4914, 0.4822, 0.4465], device=device, dtype=torch.float32)[None, :, None, None]
-#     ds = torch.as_tensor([0.2023, 0.1994, 0.2010], device=device, dtype=torch.float32)[None, :, None, None]
-#     label_pred = torch.argmin(torch.sum(local_gradients[-2], dim=-1), dim=-1).detach().reshape((1,))
-#     local_model.zero_grad()
-#     config = dict(signed=True,
-#                   boxed=True,
-#                   cost_fn='sim',
-#                   indices='def',
-#                   weights='equal',
-#                   lr=0.1,
-#                   optim='adam',
-#                   restarts=1,
-#                   max_iterations=8000,
-#                   total_variation=1e-6,
-#                   init='randn',
-#                   filter='none',
-#                   lr_decay=True,
-#                   scoring_choice='loss')
-#     rec_machine = FedAvgReconstructor(local_model, (dm, ds), local_steps=5, local_lr=1e-4, config=config, use_updates=True,device=device)
-#     output, stats = rec_machine.reconstruct(local_gradients, label_pred, img_shape=(3, 32, 32))
-#     return output, label_pred
 
 
 def ig_multiple(local_model, local_gradients, device="cpu"):

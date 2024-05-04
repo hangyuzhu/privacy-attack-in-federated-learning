@@ -17,13 +17,13 @@ class TorchDummy:
     """
 
     def __init__(
-            self,
-            _input_shape: list,
-            _label_shape: list,
-            batch_size: int,
-            dm: Union[list, tuple],
-            ds: Union[list, tuple],
-            device: str
+        self,
+        _input_shape: list,
+        _label_shape: list,
+        batch_size: int,
+        dm: Union[list, tuple],
+        ds: Union[list, tuple],
+        device: str
     ):
         assert _input_shape[0] == batch_size
         assert _label_shape[0] == batch_size
@@ -34,11 +34,6 @@ class TorchDummy:
 
         self.dm = dm
         self.ds = ds
-        # inverse transform operator
-        self._it = transforms.Compose([
-            UnNormalize(dm, ds),
-            transforms.ToPILImage()
-        ])
 
         # buffer
         self.history = []
@@ -53,7 +48,7 @@ class TorchDummy:
         return self._label_shape
 
     def append(self, _dummy):
-        self.history.append(self._it(_dummy[0].cpu()))
+        self.history.append(_dummy)
 
     def append_label(self, _label):
         self.labels.append(_label)
@@ -109,8 +104,23 @@ class TorchDummyImage(TorchDummy):
             ds=ds,
             device=device,
         )
+        # inverse transform operator
+        self._it = transforms.Compose([
+            UnNormalize(dm, ds),
+            transforms.ToPILImage()
+        ])
+
         self.t_dm = torch.as_tensor(self.dm, device=device)[:, None, None]
         self.t_ds = torch.as_tensor(self.ds, device=device)[:, None, None]
+
+    def append(self, _dummy):
+        if len(_dummy) > 1:
+            self.history.extend([self._it(x.cpu()) for x in _dummy])
+        else:
+            self.history.append(self._it(_dummy[0].cpu()))
+
+    def append_label(self, _label):
+        self.labels.extend([label.item() for label in _label])
 
 
 def generate_dummy_k(dummy, device):

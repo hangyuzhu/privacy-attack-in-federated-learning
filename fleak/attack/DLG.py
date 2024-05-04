@@ -20,7 +20,7 @@ def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
     :param dummy: TorchDummy object
     :param epochs: Number of epochs
     :param device: cpu or cuda
-    :return: dummy data
+    :return: dummy data, dummy label (int)
     """
     model.eval()
 
@@ -48,10 +48,12 @@ def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
 
     # save the dummy data
     dummy.append(dummy_data.detach())
+    # convert dummy label to integer
+    rec_dummy_label = torch.argmax(dummy_label, dim=-1)
     # save the dummy label
-    dummy.append_label(torch.argmax(dummy_label, dim=-1).item())
+    dummy.append_label(rec_dummy_label)
 
-    return dummy_data, dummy_label
+    return dummy_data, rec_dummy_label
 
 
 def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):

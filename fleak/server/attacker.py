@@ -35,7 +35,7 @@ class ServerAttacker(Server):
         :return: reconstructed data and labels
         """
         local_grads = self.extract_gradients(self.updates[0][-1])
-        # update global model
+        # replace the global model by client model
         self.global_model.load_state_dict(self.updates[0][-1])
 
         if method == "dlg":
