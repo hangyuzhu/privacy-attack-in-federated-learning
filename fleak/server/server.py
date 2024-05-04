@@ -18,7 +18,6 @@ class Server:
         server_group=None,
         global_model=None,
         test_loader=None,
-        dummy=None,
         device=None
     ):
         # server info
@@ -31,7 +30,6 @@ class Server:
         # model & data
         self.global_model = global_model.to(self.device)
         self.test_loader = test_loader
-        self.dummy = dummy
 
     @property
     def model_size(self):
@@ -115,28 +113,6 @@ class Server:
         self.global_model.load_state_dict(averaged_soln)
         # clear uploads buffer
         self.updates = []
-
-    def attack(self, method):
-        """
-        Randomly select a client to infer its private data
-
-        :param method: attack method
-        :return: reconstructed data and labels
-        """
-        local_grads = self.extract_gradients(self.updates[0][-1])
-        # update global model
-        self.global_model.load_state_dict(self.updates[0][-1])
-
-        if method == "dlg":
-            dlg(self.global_model, local_grads, self.dummy, 300, self.device)
-        elif method == "idlg":
-            idlg(self.global_model, local_grads, self.dummy, 300, 1.0, self.device)
-        elif method == "ig_single":
-            ig_single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
-        elif method == "ig_weight":
-            ig_weight(self.global_model, local_grads, self.dummy, 8000, 0.1, 2, 0.1, 1e-6, self.device)
-        else:
-            raise ValueError("Unexpected {} Attack Type.".format(method))
 
     def save_model(self, path):
         # Save server model

@@ -180,7 +180,8 @@ def multi_step_gradients(model, inputs, labels, criterion, local_epochs, local_l
     """
 
     meta_model = MetaModel(model)
-    # directly deepcopy meta model can accelerate training speed ?
+    # slightly faster than using OrderedDict to copy named parameters
+    # but consume more device memories
     meta_model_origin = copy.deepcopy(meta_model)
 
     # equivalent to local client training epochs in FL

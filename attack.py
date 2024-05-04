@@ -1,9 +1,8 @@
 import os
 import time
 import matplotlib.pyplot as plt
-from torchvision import transforms
 
-from fleak.server import Server
+from fleak.server import ServerAttacker
 from fleak.client import Client
 from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
@@ -47,10 +46,12 @@ def main(args):
     model = get_model_options(args.dataset)[args.model]
 
     # ======= Create Server ========
-    server = Server(global_model=model(n_classes),
-                    test_loader=test_loader,
-                    dummy=dummy,
-                    device=args.device)
+    server = ServerAttacker(global_model=model(n_classes),
+                            test_loader=test_loader,
+                            dummy=dummy,
+                            local_epochs=args.num_epochs,
+                            local_lr=args.lr,
+                            device=args.device)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,

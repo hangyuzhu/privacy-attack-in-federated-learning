@@ -6,18 +6,20 @@ from ..utils.train_eval import train, evaluate
 
 class Client:
 
-    def __init__(self,
-                 client_id=None,
-                 client_group=None,
-                 client_model=None,
-                 num_epochs=1,
-                 lr=0.1,
-                 lr_decay=0.95,
-                 momentum=0.5,
-                 train_loader=None,
-                 valid_loader=None,
-                 test_loader=None,
-                 device=None):
+    def __init__(
+        self,
+        client_id=None,
+        client_group=None,
+        client_model=None,
+        num_epochs=1,
+        lr=0.1,
+        lr_decay=0.95,
+        momentum=0.5,
+        train_loader=None,
+        valid_loader=None,
+        test_loader=None,
+        device=None
+    ):
         self.client_id = client_id
         self.client_group = client_group
         self.device = device
