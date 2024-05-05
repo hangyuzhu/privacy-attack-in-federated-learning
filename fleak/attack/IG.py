@@ -14,24 +14,24 @@ from .DLG import dummy_criterion
 from ..model import MetaModel
 
 
-def ig_single(model, grads, dummy, epochs=4000, lr=0.1, alpha=1e-6, device="cpu"):
+def ig_single(model, gt_grads, dummy, rec_epochs=4000, rec_lr=0.1, alpha=1e-6, device="cpu"):
     """Reconstruct an image from single gradients
 
     Similar to DLG based methods but adopting cosine similarity as the loss function
 
     :param model: inferred model
-    :param grads: gradients of the ground-truth data
+    :param gt_grads: gradients of the ground-truth data
     :param dummy: TorchDummy object
-    :param epochs: number of reconstruct epochs
-    :param lr: reconstruct learning rate
+    :param rec_epochs: number of reconstruct epochs
+    :param rec_lr: reconstruct learning rate
     :param alpha: hyperparameter for TV term
     :param device: cpu or cuda
     :return: dummy data & dummy label
     """
     model.eval()
 
-    reconstructor = GradientReconstructor(model, dummy, epochs, lr, alpha, device)
-    dummy_data, dummy_label = reconstructor.reconstruct(grads)
+    reconstructor = GradientReconstructor(model, dummy, rec_epochs, rec_lr, alpha, device)
+    dummy_data, dummy_label = reconstructor.reconstruct(gt_grads)
 
     dummy.append(dummy_data)
     dummy.append_label(dummy_label)
@@ -39,16 +39,16 @@ def ig_single(model, grads, dummy, epochs=4000, lr=0.1, alpha=1e-6, device="cpu"
     return dummy_data, dummy_label
 
 
-def ig_weight(model, grads, dummy, epochs, lr, local_epochs, local_lr, alpha, device="cpu"):
-    """Reconstruct an image from weights after several SGD steps
+def ig_multi(model, gt_grads, dummy, rec_epochs, rec_lr, local_epochs, local_lr, alpha, device="cpu"):
+    """Reconstruct one or multiple images from weights after several SGD steps
 
     Dummy gradients are simulated by multiple steps of SGD
 
     :param model: inferred model
-    :param grads: gradients of the ground-truth data
+    :param gt_grads: gradients of the ground-truth data
     :param dummy: TorchDummy object
-    :param epochs: number of reconstruct epochs
-    :param lr: reconstruct learning rate
+    :param rec_epochs: number of reconstruct epochs
+    :param rec_lr: reconstruct learning rate
     :param local_epochs: number of epochs for client training
     :param local_lr: learning rate for client training
     :param alpha: hyperparameter for TV term
@@ -57,8 +57,8 @@ def ig_weight(model, grads, dummy, epochs, lr, local_epochs, local_lr, alpha, de
     """
     model.eval()
 
-    reconstructor = FedAvgReconstructor(model, dummy, epochs, lr, local_epochs, local_lr, alpha, device)
-    dummy_data, dummy_label = reconstructor.reconstruct(grads)
+    reconstructor = FedAvgReconstructor(model, dummy, rec_epochs, rec_lr, local_epochs, local_lr, alpha, device)
+    dummy_data, dummy_label = reconstructor.reconstruct(gt_grads)
 
     dummy.append(dummy_data)
     dummy.append_label(dummy_label)
@@ -151,7 +151,7 @@ class GradientReconstructor:
 
 
 class FedAvgReconstructor(GradientReconstructor):
-    """Reconstruct an image from weights after n gradient descent steps
+    """Reconstruct one or multiple imagex from weights after n SGD steps
 
     Caution: epochs & lr are hyperparameters for reconstruction updates
              while local_epochs & local_lr are hyperparameters for recovering gradients
@@ -263,30 +263,3 @@ def total_variation(x):
     dx = torch.mean(torch.abs(x[:, :, :, :-1] - x[:, :, :, 1:]))
     dy = torch.mean(torch.abs(x[:, :, :-1, :] - x[:, :, 1:, :]))
     return dx + dy
-
-
-def ig_multiple(local_model, local_gradients, device="cpu"):
-    dm = torch.as_tensor([0.4914, 0.4822, 0.4465], device=device, dtype=torch.float32)[None, :, None, None]
-    ds = torch.as_tensor([0.2023, 0.1994, 0.2010], device=device, dtype=torch.float32)[None, :, None, None]
-    local_steps = 5
-    local_lr = 1e-4
-    use_updates = True
-    labels_pred = torch.argmin(torch.sum(list(local_gradients.values())[-2], dim=-1), dim=-1).detach().reshape((1,))
-    local_model.zero_grad()
-    config = dict(signed=True,
-                  boxed=True,
-                  cost_fn='sim',
-                  indices='def',
-                  weights='equal',
-                  lr=1,
-                  optim='adam',
-                  restarts=8,
-                  max_iterations=24000,
-                  total_variation=1e-6,
-                  init='randn',
-                  filter='none',
-                  lr_decay=True,
-                  scoring_choice='loss')
-    rec_machine = FedAvgReconstructor(local_model, (dm, ds), local_steps, local_lr, config, use_updates=use_updates, num_images=8)
-    output, stats = rec_machine.reconstruct(local_gradients, labels_pred, img_shape=(3, 32, 32))
-    return output, labels_pred

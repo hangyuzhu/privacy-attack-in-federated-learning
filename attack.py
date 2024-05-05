@@ -1,4 +1,3 @@
-import os
 import time
 
 from fleak.server import ServerAttacker
@@ -6,7 +5,7 @@ from fleak.client import Client
 from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY, ATTACKS
-from fleak.data.image_dataset import UnNormalize, N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
+from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
 from fleak.data.dataloader import generate_dataloaders
 from fleak.utils.plot import plot_dummy_images
 
@@ -34,7 +33,7 @@ def main(args):
     # Assume the attacker holds the mean and std of the training data
     dummy = TorchDummyImage(
         image_shape=IMAGE_SHAPE[args.dataset],
-        batch_size=1,
+        batch_size=5,
         n_classes=N_CLASSES[args.dataset],
         dm=IMAGE_MEAN[args.dataset],
         ds=IMAGE_STD[args.dataset],

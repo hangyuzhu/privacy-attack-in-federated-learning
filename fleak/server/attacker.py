@@ -1,6 +1,6 @@
 from .server import Server
 from ..attack.DLG import dlg, idlg
-from ..attack.IG import ig_single, ig_weight
+from ..attack.IG import ig_single, ig_multi
 
 
 class ServerAttacker(Server):
@@ -44,8 +44,8 @@ class ServerAttacker(Server):
             idlg(self.global_model, local_grads, self.dummy, 300, 1.0, self.device)
         elif method == "ig_single":
             ig_single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
-        elif method == "ig_weight":
-            ig_weight(
+        elif method == "ig_multi":
+            ig_multi(
                 self.global_model, local_grads, self.dummy,
                 8000, 0.1, self.local_epochs, self.local_lr, 1e-6, self.device)
         else:
