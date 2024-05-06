@@ -12,7 +12,8 @@ class TorchDummy:
     """Base class for dummy data
 
     This module allows easy managing of dummy data
-    Caution: dm & ds are not always available
+    Caution: 1) dm & ds are not always available
+             2) methods like inverting linear layer does not care about the batch size !
 
     """
 
@@ -81,6 +82,9 @@ class TorchDummyImage(TorchDummy):
             device: str
     ):
         """
+
+        Caution: methods like inverting linear layer does not care about the batch size !
+
         :param image_shape: 3D image shape
         :param batch_size: batch size
         :param n_classes: number of data classes
@@ -90,14 +94,13 @@ class TorchDummyImage(TorchDummy):
         """
         # channel first image for pytorch
         assert len(image_shape) == 3
-        # insert the batch dimension
-        image_shape.insert(0, batch_size)
+        self._image_shape = image_shape
 
         self.n_classes = n_classes
         # label shape [N, C]
         label_shape = [batch_size, self.n_classes]
         super().__init__(
-            _input_shape=image_shape,
+            _input_shape=[batch_size, *image_shape],
             _label_shape=label_shape,
             batch_size=batch_size,
             dm=dm,
@@ -112,6 +115,10 @@ class TorchDummyImage(TorchDummy):
 
         self.t_dm = torch.as_tensor(self.dm, device=device)[:, None, None]
         self.t_ds = torch.as_tensor(self.ds, device=device)[:, None, None]
+
+    @property
+    def image_shape(self):
+        return self._image_shape
 
     def append(self, _dummy):
         self.history.extend([self._it(x.cpu()) for x in _dummy])

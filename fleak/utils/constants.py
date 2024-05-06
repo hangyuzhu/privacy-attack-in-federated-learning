@@ -1,7 +1,7 @@
 DATASETS = ['mnist', 'cifar10', 'cifar100', 'tiny_imagenet']
 
 MODELS = ['mlp', 'cnn', 'simple_cnn',
-          'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'robin']
+          'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', "robin"]
 MODE = ['test', 'valid']
 STRATEGY = ['fedavg', 'fedper', 'fedcrowd', 'fedbcc', 'bcc']
 RESULTS = ['results_fedavg', 'results_fedcrowd', 'results_fedbcc', 'results_bcc']

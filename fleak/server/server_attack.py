@@ -1,7 +1,7 @@
 from .server import Server
 from ..attack.DLG import dlg, idlg
 from ..attack.IG import ig_single, ig_multi
-from ..attack.robbing_the_fed import robbing
+from ..attack.Robbing import invert_linear_layer
 
 
 class ServerAttacker(Server):
@@ -50,10 +50,6 @@ class ServerAttacker(Server):
                 self.global_model, local_grads, self.dummy,
                 8000, 0.1, self.local_epochs, self.local_lr, 1e-6, self.device)
         elif method == "robbing":
-            secret = dict(weight_idx=0, bias_idx=1, shape=(3, 32, 32), structure="cumulative")
-            secrets = {"ImprintBlock": secret}
-            dummy_data, dummy_label = robbing(self.global_model, local_grads, secrets, self.device)
-            self.dummy.append(dummy_data)
-            self.dummy.append_label(dummy_label)
+            invert_linear_layer(local_grads, self.dummy)
         else:
             raise ValueError("Unexpected {} Attack Type.".format(method))

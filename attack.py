@@ -31,6 +31,7 @@ def main(args):
     )
 
     # Assume the attacker holds the mean and std of the training data
+    # For methods like inverting linear layer, rec_batch_size can be arbitrary values
     dummy = TorchDummyImage(
         image_shape=IMAGE_SHAPE[args.dataset],
         batch_size=args.rec_batch_size,
