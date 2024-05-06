@@ -114,10 +114,7 @@ class TorchDummyImage(TorchDummy):
         self.t_ds = torch.as_tensor(self.ds, device=device)[:, None, None]
 
     def append(self, _dummy):
-        if len(_dummy) > 1:
-            self.history.extend([self._it(x.cpu()) for x in _dummy])
-        else:
-            self.history.append(self._it(_dummy[0].cpu()))
+        self.history.extend([self._it(x.cpu()) for x in _dummy])
 
     def append_label(self, _label):
         self.labels.extend([label.item() for label in _label])

@@ -219,13 +219,13 @@ class _BaseAttacker:
     def _cast_shared_data(self, shared_data):
         """Cast user data to reconstruction data type."""
         cast_grad_list = []
-        gradients = copy.deepcopy(shared_data["gradients"])
-        grads = tuple(gradients.values())
+        # gradients = copy.deepcopy(shared_data["gradients"])
+        # grads = tuple(gradients.values())
 
         # for shared_grad in grads:
-        # # for shared_grad in shared_data["gradients"]:
-        #     cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in shared_grad]]
-        cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in grads]]
+        for shared_grad in shared_data["gradients"]:
+            cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in shared_grad]]
+        # cast_grad_list += [[g.to(dtype=self.setup["dtype"]) for g in grads]]
         shared_data["gradients"] = cast_grad_list
         return shared_data
 

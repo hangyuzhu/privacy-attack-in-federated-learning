@@ -94,7 +94,7 @@ class ImprintBlock(torch.nn.Module):
 
 class RobinFed(nn.Module):
 
-    def __init__(self, data_size, num_bins, num_class, shape_img, dataset='cifar10', model_type="resnet18"):
+    def __init__(self, num_class, data_size, num_bins, shape_img, dataset='cifar10', model_type="resnet18"):
         super(RobinFed, self).__init__()
         self.flatten = nn.Flatten()
         self.linear_block = ImprintBlock(data_size, num_bins)

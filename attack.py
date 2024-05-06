@@ -4,7 +4,7 @@ from fleak.server import ServerAttacker
 from fleak.client import Client
 from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
-from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY, ATTACKS
+from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
 from fleak.data.dataloader import generate_dataloaders
 from fleak.utils.plot import plot_dummy_images
@@ -33,7 +33,7 @@ def main(args):
     # Assume the attacker holds the mean and std of the training data
     dummy = TorchDummyImage(
         image_shape=IMAGE_SHAPE[args.dataset],
-        batch_size=5,
+        batch_size=args.rec_batch_size,
         n_classes=N_CLASSES[args.dataset],
         dm=IMAGE_MEAN[args.dataset],
         ds=IMAGE_STD[args.dataset],
@@ -44,7 +44,7 @@ def main(args):
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
 
-    # ======= Create Server ========
+    # ======= Create Attacker ========
     server = ServerAttacker(global_model=model(n_classes),
                             test_loader=test_loader,
                             dummy=dummy,
@@ -106,9 +106,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__)
 
-    parser.add_argument('--strategy', type=str, default='fedavg', choices=STRATEGY,
-                        help='strategy used in federated learning')
-
     parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
     parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
@@ -118,9 +115,6 @@ if __name__ == '__main__':
                         help='batch size when training and testing.')
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
     parser.add_argument('--lr_decay', default=0.95, type=float, help='learning rate decay')
-
-    # for fedper
-    parser.add_argument('--num_shared_layers', default=-1, type=int, help='number of shared layers for fedper')
 
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
@@ -146,6 +140,8 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
 
     parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
+    parser.add_argument('--rec_batch_size', default=1, type=int, metavar='N',
+                        help='reconstruction batch size.')
 
     args = parser.parse_args()
     print('\n============== Federated Learning Setting ==============')

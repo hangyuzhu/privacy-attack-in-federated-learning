@@ -17,50 +17,71 @@ class MnistLeNet5(nn.Module):
 
     def __init__(self, num_classes):
         super(MnistLeNet5, self).__init__()
+        # conv1
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5, stride=1, padding=2)
+        self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=2)
+        # conv2
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=1, padding=2)
+        self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(kernel_size=2)
+        # linear
+        self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(7 * 7 * 64, 1024)
+        self.relu3 = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(1024, num_classes)
 
     def forward(self, x):
+        # conv1
         x = self.conv1(x)
-        x = F.relu(x)
+        x = self.relu1(x)
         x = self.pool1(x)
+        # conv2
         x = self.conv2(x)
-        x = F.relu(x)
+        x = self.relu2(x)
         x = self.pool2(x)
-        x = torch.flatten(x, 1)
+        # linear
+        x = self.flatten(x)
         x = self.fc1(x)
-        x = F.relu(x)
+        x = self.relu3(x)
         x = self.dropout(x)
-        output = self.fc2(x)
-        return output
+        x = self.fc2(x)
+        return x
 
 
 class MnistConvNet(nn.Module):
 
     def __init__(self, num_classes):
         super(MnistConvNet, self).__init__()
+        # conv1
         self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.relu1 = nn.ReLU()
+        # conv2
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.relu2 = nn.ReLU()
+        self.max_pool2d = nn.MaxPool2d(2)
         self.dropout1 = nn.Dropout(0.25)
-        self.dropout2 = nn.Dropout(0.5)
+        # linear
+        self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(9216, 128)
+        self.relu3 = nn.ReLU()
+        self.dropout2 = nn.Dropout(0.5)
         self.fc2 = nn.Linear(128, num_classes)
 
     def forward(self, x):
+        # conv1
         x = self.conv1(x)
-        x = F.relu(x)
+        x = self.relu1(x)
+        # conv2
         x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
+        x = self.relu2(x)
+        x = self.max_pool2d(x, 2)
         x = self.dropout1(x)
-        x = torch.flatten(x, 1)
+        # linear
+        x = self.flatten(x, 1)
         x = self.fc1(x)
-        x = F.relu(x)
+        x = self.relu3(x)
         x = self.dropout2(x)
         return self.fc2(x)
 
@@ -69,14 +90,20 @@ class MnistMLP(nn.Module):
 
     def __init__(self, num_classes):
         super(MnistMLP, self).__init__()
+        self.flatten = nn.Flatten()
+        # linear1
         self.fc1 = nn.Linear(28 * 28, 200)
+        self.relu1 = nn.ReLU()
+        # linear2
         self.fc2 = nn.Linear(200, 200)
+        self.relu2 = nn.ReLU()
+        # linear3
         self.fc3 = nn.Linear(200, num_classes)
 
     def forward(self, x):
-        x = x.view(-1, x.shape[1] * x.shape[-2] * x.shape[-1])
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = self.flatten(x)
+        x = self.relu1(self.fc1(x))
+        x = self.relu2(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -85,14 +112,20 @@ class CifarMLP(nn.Module):
 
     def __init__(self, num_classes):
         super(CifarMLP, self).__init__()
+        self.flatten = nn.Flatten()
+        # linear1
         self.fc1 = nn.Linear(32 * 32, 200)
+        self.relu1 = nn.ReLU()
+        # linear2
         self.fc2 = nn.Linear(200, 200)
+        self.relu2 = nn.ReLU()
+        # linear3
         self.fc3 = nn.Linear(200, num_classes)
 
     def forward(self, x):
-        x = x.view(-1, x.shape[1] * x.shape[-2] * x.shape[-1])
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = self.flatten(x)
+        x = self.relu1(self.fc1(x))
+        x = self.relu2(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -118,7 +151,6 @@ class CifarConvNet(nn.Module):
         x = self.relu1(self.conv1(x))
         x = self.pool(self.relu2(self.conv2(x)))
         x = self.drop_out1(x)
-        # x = x.view(x.size(0), -1)
         x = self.flatten(x)
         x = self.drop_out2(self.relu3(self.fc1(x)))
         x = self.fc2(x)

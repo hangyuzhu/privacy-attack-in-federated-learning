@@ -1,9 +1,9 @@
 import collections
+from collections import OrderedDict
 from itertools import repeat
 
 import torch
 import torch.nn.functional as F
-from collections import OrderedDict
 
 
 def _ntuple(n, name="parse"):
@@ -22,8 +22,8 @@ _pair = _ntuple(2, "_pair")
 class MetaModel(torch.nn.Module):
     """ Meta Model for models built by torch.nn.Module
 
-    Caution: 1) the modules of model should be built in order
-             2)
+    Caution: 1) modules of model should be built in order
+             2) modules not containing parameters are required to be constructed by nn.Module
     """
 
     def __init__(self, model):

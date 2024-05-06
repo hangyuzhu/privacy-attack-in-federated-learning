@@ -39,7 +39,8 @@ def ig_single(model, gt_grads, dummy, rec_epochs=4000, rec_lr=0.1, alpha=1e-6, d
     return dummy_data, dummy_label
 
 
-def ig_multi(model, gt_grads, dummy, rec_epochs, rec_lr, local_epochs, local_lr, alpha, device="cpu"):
+def ig_multi(model, gt_grads, dummy, rec_epochs=8000, rec_lr=0.1,
+             local_epochs=5, local_lr=1e-4, alpha=1e-6, device="cpu"):
     """Reconstruct one or multiple images from weights after several SGD steps
 
     Dummy gradients are simulated by multiple steps of SGD
