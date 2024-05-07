@@ -1,4 +1,5 @@
 import time
+from functools import partial
 
 from fleak.server import ServerAttacker
 from fleak.client import Client
@@ -7,6 +8,7 @@ from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
 from fleak.data.dataloader import generate_dataloaders
+from fleak.model.imprint import ImprintModel
 from fleak.utils.plot import plot_dummy_images
 
 
@@ -44,6 +46,11 @@ def main(args):
 
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
+
+    # adding imprint block
+    # often for robbing the fed
+    if args.imprint:
+        model = partial(ImprintModel, base_module=model, input_shape=dummy.input_shape)
 
     # ======= Create Attacker ========
     server = ServerAttacker(global_model=model(n_classes),
@@ -141,6 +148,8 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
 
     parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
+    parser.add_argument('--imprint', default=False, action='store_true',
+                        help='if wrapping the model with imprint block')
     parser.add_argument('--rec_batch_size', default=1, type=int, metavar='N',
                         help='reconstruction batch size.')
 

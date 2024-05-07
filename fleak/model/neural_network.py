@@ -114,7 +114,7 @@ class CifarMLP(nn.Module):
         super(CifarMLP, self).__init__()
         self.flatten = nn.Flatten()
         # linear1
-        self.fc1 = nn.Linear(32 * 32, 200)
+        self.fc1 = nn.Linear(3 * 32 * 32, 200)
         self.relu1 = nn.ReLU()
         # linear2
         self.fc2 = nn.Linear(200, 200)
