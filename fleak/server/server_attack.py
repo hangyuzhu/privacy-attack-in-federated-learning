@@ -1,7 +1,8 @@
 from .server import Server
-from ..attack.DLG import dlg, idlg
-from ..attack.IG import ig_single, ig_multi
-from ..attack.Robbing import invert_linear_layer
+from ..attack import dlg, idlg
+from ..attack import ig_single, ig_multi
+from ..attack import invert_linear_layer
+from ..attack import grnn
 
 
 class ServerAttacker(Server):
@@ -51,5 +52,7 @@ class ServerAttacker(Server):
                 8000, 0.1, self.local_epochs, self.local_lr, 1e-6, self.device)
         elif method == "robbing":
             invert_linear_layer(local_grads, self.dummy)
+        elif method == "grnn":
+            grnn(self.global_model, local_grads, self.dummy, 1000, 1e-3, self.device)
         else:
             raise ValueError("Unexpected {} Attack Type.".format(method))

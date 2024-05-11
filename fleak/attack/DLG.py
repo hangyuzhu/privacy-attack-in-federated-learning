@@ -15,7 +15,7 @@ def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
 
     https://proceedings.neurips.cc/paper/2019/file/60a6c4002cc7b29142def8871531281a-Paper.pdf
 
-    :param model: dlg model
+    :param model: inferred model
     :param grads: gradients of the ground truth data
     :param dummy: TorchDummy object
     :param epochs: Number of epochs
@@ -32,6 +32,7 @@ def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
     for iters in range(epochs):
         def closure():
             optimizer.zero_grad()
+            model.zero_grad()  # not necessary just in case
 
             dummy_pred = model(dummy_data)
             dummy_loss = criterion(dummy_pred, dummy_label)
@@ -62,7 +63,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
     iDLG theoretically gives label prediction
     https://arxiv.org/pdf/2001.02610.pdf
 
-    :param model: idlg model
+    :param model: inferred model
     :param grads: gradients of the ground truth data
     :param dummy: TorchDummy object
     :param epochs: number of epochs
@@ -82,6 +83,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
     for iters in range(epochs):
         def closure():
             optimizer.zero_grad()
+            model.zero_grad()
 
             dummy_pred = model(dummy_data)
             dummy_loss = criterion(dummy_pred, label_pred)

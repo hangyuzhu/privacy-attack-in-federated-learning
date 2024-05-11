@@ -117,3 +117,25 @@ class ImprintBlock(nn.Module):
         else:
             output = x_in + x.mean(dim=1, keepdim=True)
         return output
+
+
+def _init_fourier_weight(tensor, mode=0):
+    K, N = tensor.shape[0], tensor.shape[1]
+    weights = torch.cos(math.pi / N * (torch.arange(0, N) + 0.5) * mode).repeat(K, 1) / N * max(mode, 0.33) * 4
+    with torch.no_grad():
+        tensor.copy_(weights)
+
+
+def _init_laplacian_bias(tensor):
+    num_bins = len(tensor)
+    bins = []
+    mass_per_bin = 1 / num_bins
+    bins.append(-10)  # -Inf is not great here, but NormalDist(mu=0, sigma=1).cdf(10) approx 1
+    for i in range(1, num_bins):
+        bins.append(laplace(loc=0.0, scale=1 / math.sqrt(2)).ppf(i * mass_per_bin))
+
+    new_biases = torch.zeros_like(tensor)
+    for i in range(num_bins):
+        new_biases[i] = -bins[i]
+    with torch.no_grad():
+        tensor.copy_(new_biases)

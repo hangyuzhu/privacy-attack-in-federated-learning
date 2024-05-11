@@ -1,4 +1,7 @@
+import math
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class MnistGenerator(nn.Module):
@@ -55,6 +58,100 @@ class MnistDiscriminator(nn.Module):
         x = self.fc(x)
         return x
 
+
+class GLU(nn.Module):
+    """ Gated Linear Unit
+
+    Language Modeling with Gated Convolutional Networks
+    http://proceedings.mlr.press/v70/dauphin17a/dauphin17a.pdf
+
+    This module can be regarded as an activation layer
+    The authors believe that GLU is far more stable than ReLU and can learn faster than Sigmoid
+
+    """
+
+    def __init__(self):
+        super(GLU, self).__init__()
+
+    def forward(self, x):
+        nc = x.size(1)
+        assert nc % 2 == 0, 'channels dont divide 2!'
+        nc = int(nc / 2)
+        # input channels are divided by 2
+        return x[:, :nc] * torch.sigmoid(x[:, nc:])
+
+
+class GRNNGenerator(nn.Module):
+
+    def __init__(self, num_classes, in_features, image_shape):
+        """ Generator for GRNN
+
+        :param num_classes: number of classification classes
+        :param in_features: dimension of the input (noise) features
+        :param image_shape: channel first image shape
+        """
+        super(GRNNGenerator, self).__init__()
+        # dummy label predictions
+        self.linear = nn.Linear(in_features, num_classes)
+
+        # for dummy data
+        image_channel = image_shape[0]
+        image_size = image_shape[1]
+        block_nums = int(math.log2(image_size) - 3)
+        # (B, 128, 1, 1) -> (B, 128, 4, 4)
+        self.in_block = nn.Sequential(
+            # channels times 2
+            nn.ConvTranspose2d(in_features, image_size * pow(2, block_nums) * 2, 4, 1, 0),
+            GLU()   # channels are divided by 2
+        )
+        self.blocks = nn.ModuleList()
+        # (B, 128, 4, 4) -> (B, 64, 8, 8) -> (B, 32, 16, 16)
+        for bn in reversed(range(block_nums)):
+            self.blocks.append(self.up_sampling(pow(2, bn + 1) * image_size, pow(2, bn) * image_size))
+        # (B, 32, 16, 16) -> (B, 3, 32, 32)
+        self.out_block = self.up_sampling(image_size, image_channel)
+
+    @staticmethod
+    def up_sampling(in_planes, out_planes):
+        return nn.Sequential(
+            # image rows and cols doubled
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            # padding makes the image size unchanged
+            nn.Conv2d(in_planes, out_planes * 2, kernel_size=3, stride=1,
+                      padding=1, bias=False),
+            nn.BatchNorm2d(out_planes*2),
+            GLU()
+        )
+
+    # forward method
+    def forward(self, x):
+        # generate dummy label
+        y = F.softmax(self.linear(x), -1)
+
+        # generate dummy data
+        # (B, In) -> (B, In, 1, 1)
+        x = x.view(-1, x.size(1), 1, 1)
+        x = self.in_block(x)
+        for block in self.blocks:
+            x = block(x)
+        x = self.out_block(x)
+        x = F.sigmoid(x)
+        return x, y
+
+
+def _init_normal(m, mean, std):
+    """ initialize the model parameters by random variables sampled from Gaussian distribution
+
+    Caution: 1) this should be correctly employed by 'model.apply()'
+             2) may be unnecessary for GRNN if the discriminator is not initialized by Gaussian
+
+    :param m: nn.Module
+    :return: None
+    """
+    if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        nn.init.normal_(m.weight, mean, std)
+        if m.bias is not None:
+            nn.init.zeros_(m.bias)
 
 
 class Cifar10Generator(nn.Module):

@@ -8,7 +8,7 @@ from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
 from fleak.data.dataloader import generate_dataloaders
-from fleak.model.imprint import ImprintModel
+from fleak.model import ImprintModel
 from fleak.utils.plot import plot_dummy_images
 
 

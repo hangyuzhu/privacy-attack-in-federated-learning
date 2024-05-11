@@ -18,9 +18,9 @@ def invert_linear_layer(gt_grads, dummy):
     # gradients of bias of the first linear layer
     invert_bias = gt_grads[1]
 
-    # increase the number of bins may get better inverting performance
+    # increase the number of bins may get better (worse) inverting performance
     # larger bins is equivalent to smaller interval between c_l & c_l+1
-    # thus, it is more likely that just a single image can be extracted
+    # thus, it is more likely that just a single (no) image can be extracted
     for i in range(0, invert_weights.shape[0] - 1):
         # extract the possible single image within c_l <= h(x) <= c_l+1
         # since inverse CDF of Gaussian / Laplacian distribution ranges from -inf to inf
