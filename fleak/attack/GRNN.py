@@ -8,9 +8,23 @@ from fleak.model.gan_network import GRNNGenerator
 
 
 def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
+    """GRNN
+
+    Instead of directly recovering dummy data, GRNN optimizes the parameters of a Generator
+    Dummy data are generated from random noise through a Generator
+    Loss function is constructed by DLG loss + WD loss + TV loss
+
+    :param model: inferred model
+    :param gt_grads: gradients of the ground-truth data
+    :param dummy: TorchDummy object
+    :param rec_epochs: number of training epochs for the Generator
+    :param alpha: hyperparameter for TV loss
+    :param device: cpu or cuda
+    :return: dummy data & dummy label
+    """
     model.eval()
 
-    flatten_gt_grads = flatten_gradients(gt_grads)
+    flatten_gt_grads = torch.cat([g.view(-1) for g in gt_grads])
 
     generator = GRNNGenerator(dummy.n_classes, in_features=128, image_shape=dummy.image_shape).to(device)
     # update parameters of the generator other than dummy data
@@ -33,7 +47,7 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
         # obtain fake gradient
         dummy_grads = torch.autograd.grad(dummy_loss, model.parameters(), create_graph=True)
 
-        flatten_dummy_grads = flatten_gradients(dummy_grads)
+        flatten_dummy_grads = torch.cat([g.view(-1) for g in dummy_grads])
         grad_diff_l2 = ((flatten_dummy_grads - flatten_gt_grads) ** 2).sum()
         grad_diff_wd = wasserstein_distance(flatten_dummy_grads, flatten_gt_grads)
         # total variation loss
@@ -52,16 +66,6 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
     dummy.append_label(rec_dummy_label)
 
     return dummy_data, rec_dummy_label
-
-
-def flatten_gradients(dy_dx):
-    flatten_dy_dx = None
-    for layer_g in dy_dx:
-        if flatten_dy_dx is None:
-            flatten_dy_dx = torch.flatten(layer_g)
-        else:
-            flatten_dy_dx = torch.cat((flatten_dy_dx, torch.flatten(layer_g)))
-    return flatten_dy_dx
 
 
 def wasserstein_distance(first_samples, second_samples, p=2):
