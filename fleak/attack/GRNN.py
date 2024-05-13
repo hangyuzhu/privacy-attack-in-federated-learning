@@ -1,14 +1,20 @@
+"""GRNN: Generative Regression Neural Network—A Data Leakage Attack for Federated Learning
+
+https://dl.acm.org/doi/abs/10.1145/3510032
+
+"""
+
 import time
 import numpy as np
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 
-from fleak.model.gan_network import GRNNGenerator
+from fleak.model.gan import GRNNGenerator
 
 
 def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
-    """GRNN
+    """Official implementation of GRNN https://github.com/Rand2AI/GRNN
 
     Instead of directly recovering dummy data, GRNN optimizes the parameters of a Generator
     Dummy data are generated from random noise through a Generator

@@ -4,7 +4,7 @@ from .server import Server
 from ..attack.cocktail import cocktail
 from collections import OrderedDict
 from ..attack.Robbing import robbing
-from ..model.gan_network import MnistGenerator, Cifar10Generator
+from ..model.gan import MnistGenerator, Cifar10Generator
 from ..attack.GGL import GGLreconstruction
 
 

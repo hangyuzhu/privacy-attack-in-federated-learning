@@ -4,7 +4,7 @@ from .server import Server
 from ..attack.DLG import dlg, idlg
 from ..attack.IG import ig, ig_weight, ig_multiple
 from ..attack.Robbing import robbing
-from ..model.gan_network import MnistGenerator, Cifar10Generator
+from ..model.gan import MnistGenerator, Cifar10Generator
 from ..attack.GGL import GGLreconstruction
 
 

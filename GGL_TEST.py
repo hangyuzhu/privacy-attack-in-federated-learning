@@ -6,7 +6,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import os
 
-from fleak.model.gan_network import Cifar10Generator,Cifar10Discriminator
+from fleak.model.gan import Cifar10Generator,Cifar10Discriminator
 
 device="cuda" if torch.cuda.is_available() else "CPU"
 dm = torch.as_tensor([0.4914672374725342, 0.4822617471218109, 0.4467701315879822], device="cuda" if torch.cuda.is_available() else "CPU", dtype=torch.float32)[None, :, None, None]

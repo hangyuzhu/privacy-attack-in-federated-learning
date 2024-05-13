@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 
 class MnistGenerator(nn.Module):
+
     def __init__(self):
         super(MnistGenerator, self).__init__()
         self.linear = nn.Sequential(
@@ -37,6 +38,7 @@ class MnistGenerator(nn.Module):
 
 
 class MnistDiscriminator(nn.Module):
+
     def __init__(self):
         super(MnistDiscriminator, self).__init__()
         self.conv1 = nn.Sequential(
@@ -152,6 +154,67 @@ def _init_normal(m, mean, std):
         nn.init.normal_(m.weight, mean, std)
         if m.bias is not None:
             nn.init.zeros_(m.bias)
+
+
+class GGLGenerator(nn.Module):
+    """Generator of GGL
+
+    This is the official implementation for CeleA dataset (resized to 32x32)
+
+    """
+
+    def __init__(self, dim=128):
+        super(GGLGenerator, self).__init__()
+        self.dim = dim
+
+        self.linear = nn.Sequential(
+            nn.Linear(128, 4 * 4 * 4 * dim),
+            nn.BatchNorm1d(4 * 4 * 4 * dim),
+            nn.ReLU(True),
+        )
+        # (B, 4 * dim * 4 * 4)
+        self.main = nn.Sequential(
+            nn.ConvTranspose2d(4 * dim, 2 * dim, 2, stride=2),
+            nn.BatchNorm2d(2 * dim),
+            nn.ReLU(True),
+            # (B, 2 * dim, 8, 8)
+            nn.ConvTranspose2d(2 * dim, dim, 2, stride=2),
+            nn.BatchNorm2d(dim),
+            nn.ReLU(True),
+            # (B, dim, 16, 16)
+            nn.ConvTranspose2d(dim, 3, 2, stride=2),
+            nn.Tanh()
+            # (B, 3, 32, 32)
+        )
+
+    def forward(self, x):
+        x = self.linear(x)
+        x = x.view(-1, 4 * self.dim, 4, 4)
+        x = self.main(x)
+        return x
+
+
+class GGLDiscriminator(nn.Module):
+
+    def __init__(self, dim=128):
+        super(GGLDiscriminator, self).__init__()
+        self.main = nn.Sequential(
+            # (B, 3, 32, 32)
+            nn.Conv2d(3, dim, 3, 2, padding=1),
+            nn.LeakyReLU(),
+            # (B, dim, 16, 16)
+            nn.Conv2d(dim, 2 * dim, 3, 2, padding=1),
+            nn.LeakyReLU(),
+            # (B, 2 * dim, 8, 8)
+            nn.Conv2d(2 * dim, 4 * dim, 3, 2, padding=1),
+            nn.LeakyReLU(),
+            # (B, 4* dim, 4, 4)
+            nn.Flatten(),
+            nn.Linear(4 * 4 * 4 * dim, 1)
+        )
+
+    def forward(self, x):
+        return self.main(x)
 
 
 class Cifar10Generator(nn.Module):
