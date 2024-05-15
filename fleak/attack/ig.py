@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from collections import OrderedDict
 
-from .DLG import dummy_criterion
+from .dlg import dummy_criterion
 from ..model import MetaModel
 
 

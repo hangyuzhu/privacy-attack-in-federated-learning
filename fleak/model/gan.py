@@ -160,6 +160,7 @@ class GGLGenerator(nn.Module):
     """Generator of GGL
 
     This is the official implementation for CeleA dataset (resized to 32x32)
+    https://github.com/zhuohangli/GGL/blob/main/GAN-training/wgan-gp_celeba.ipynb
 
     """
 
@@ -174,6 +175,7 @@ class GGLGenerator(nn.Module):
         )
         # (B, 4 * dim * 4 * 4)
         self.main = nn.Sequential(
+            # (B, 4 * dim, 4, 4)
             nn.ConvTranspose2d(4 * dim, 2 * dim, 2, stride=2),
             nn.BatchNorm2d(2 * dim),
             nn.ReLU(True),
@@ -195,6 +197,12 @@ class GGLGenerator(nn.Module):
 
 
 class GGLDiscriminator(nn.Module):
+    """Discriminator of GGL
+
+    Official implementation released by authors of the paper
+    https://github.com/zhuohangli/GGL/blob/main/GAN-training/wgan-gp_celeba.ipynb
+
+    """
 
     def __init__(self, dim=128):
         super(GGLDiscriminator, self).__init__()
@@ -217,95 +225,60 @@ class GGLDiscriminator(nn.Module):
         return self.main(x)
 
 
-class Cifar10Generator(nn.Module):
-    def __init__(self):
-        super(Cifar10Generator, self).__init__()
-        self.linear = nn.Sequential(
-                    nn.Linear(100, 4 * 4 * 256),
-                    nn.BatchNorm1d(4 * 4 * 256),
-                    nn.ReLU(True)
-                )
-                # self.main = nn.Sequential(
-                #     nn.ConvTranspose2d(100, 64 * 8, 4, 1, 0, bias=False),
-                #     nn.BatchNorm2d(64 * 8),
-                #     nn.ReLU(True),
+class CifarGenerator(nn.Module):
+
+    def __init__(self, nz=100):
+        super(CifarGenerator, self).__init__()
         self.main = nn.Sequential(
-                    # state size. 256 x 4 x 4
-                    nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
-                    nn.BatchNorm2d(128),
-                    nn.ReLU(True),
-                    # state size. 128 x 8 x 8
-                    nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
-                    nn.BatchNorm2d(64),
-                    nn.ReLU(True),
-                    # state size. 64 x 16 x 16
-                    nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=False),
-                    # nn.Tanh()
-                    # nn.BatchNorm2d(64),
-                    # nn.ReLU(True),
-                    # # state size. 3 x 32 x 32
-                    # nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=False),
-                    nn.Tanh()
-                    # state size. (nc) x 64 x 64
-                )
+            # input is Z, nz x 1 x 1
+            nn.ConvTranspose2d(nz, 256, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
+            # state size. 128 x 4 x 4
+            nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            # state size. 128 x 8 x 8
+            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            # state size. 64 x 16 x 16
+            nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # state size. 3 x 32 x 32
+        )
 
-    def forward(self, x):
-        x = self.linear(x)
-        x = x.view(-1, 256, 4, 4)
-        x = self.main(x)
-        return x
+    def forward(self, input):
+        output = self.main(input)
+        return output
 
-class Cifar10Discriminator(nn.Module):
+
+class CifarDiscriminator(nn.Module):
+
     def __init__(self):
-        super(Cifar10Discriminator, self).__init__()
-        self.conv1 = nn.Sequential(
+        super(CifarDiscriminator, self).__init__()
+        self.main = nn.Sequential(
+            # input is 3 x 32 x 32
             nn.Conv2d(3, 64, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2, inplace=True),
-        )
-        # 64 * 32 * 32
-        self.conv2 = nn.Sequential(
+            # state size. 64 x 16 x 16
             nn.Conv2d(64, 128, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        # 128 * 16 * 16
-        self.conv3 = nn.Sequential(
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 128 x 8 x 8
             nn.Conv2d(128, 256, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        # 256 * 8 * 8
-        self.conv4 = nn.Sequential(
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 256 x 4 x 4
             nn.Conv2d(256, 1, 4, 1, 0, bias=False),
             nn.Sigmoid()
+            # state size. 1 x 1 x 1
         )
 
-
-        # self.main = nn.Sequential(
-        #     nn.Conv2d(3, 64, 4, 2, 1, bias=False),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf) x 32 x 32
-        #     nn.Conv2d(64, 64 * 2, 4, 2, 1, bias=False),
-        #     nn.BatchNorm2d(64 * 2),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf*2) x 16 x 16
-        #     nn.Conv2d(64 * 2, 64 * 4, 4, 2, 1, bias=False),
-        #     nn.BatchNorm2d(64 * 4),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf*4) x 8 x 8
-        #     nn.Conv2d(64 * 4, 64 * 8, 4, 2, 1, bias=False),
-        #     nn.BatchNorm2d(64 * 8),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf*8) x 4 x 4
-        #     nn.Conv2d(64 * 8, 1, 4, 1, 0, bias=False),
-        #     nn.Sigmoid()
-        # )
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        # x = self.main(x)
-        x = x.view(-1, 1).squeeze(1)
-        return x
+    def forward(self, input):
+        output = self.main(input)
+        return output.view(-1, 1).squeeze(1)
 
 
 class Generator(nn.Module):

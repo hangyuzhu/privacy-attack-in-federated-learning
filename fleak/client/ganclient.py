@@ -5,7 +5,7 @@ from ..utils.train_eval import evaluate
 from .client import Client
 from fleak.attack import GAN
 from ..utils.train_eval import train
-from ..model import MnistGenerator,Cifar10Generator
+from ..model import MnistGenerator
 
 
 class GanClient(Client):

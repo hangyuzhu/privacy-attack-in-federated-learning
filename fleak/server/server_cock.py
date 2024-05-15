@@ -3,9 +3,9 @@ import torch
 from .server import Server
 from ..attack.cocktail import cocktail
 from collections import OrderedDict
-from ..attack.Robbing import robbing
+from ..attack.rtf import robbing
 from ..model.gan import MnistGenerator, Cifar10Generator
-from ..attack.GGL import GGLreconstruction
+from ..attack.ggl import GGLreconstruction
 
 
 class ServerCock(Server):

@@ -1,11 +1,11 @@
 import torch
 
 from .server import Server
-from ..attack.DLG import dlg, idlg
-from ..attack.IG import ig, ig_weight, ig_multiple
-from ..attack.Robbing import robbing
+from ..attack.dlg import dlg, idlg
+from ..attack.ig import ig, ig_weight, ig_multiple
+from ..attack.rtf import robbing
 from ..model.gan import MnistGenerator, Cifar10Generator
-from ..attack.GGL import GGLreconstruction
+from ..attack.ggl import GGLreconstruction
 
 
 class ServerDLG(Server):
