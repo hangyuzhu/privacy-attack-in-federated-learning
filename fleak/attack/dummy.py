@@ -121,7 +121,7 @@ class TorchDummyImage(TorchDummy):
         return self._image_shape
 
     def append(self, _dummy):
-        self.history.extend([self._it(x.cpu()) for x in _dummy])
+        self.history.extend([self._it(x.detach().cpu()) for x in _dummy])
 
     def append_label(self, _label):
         self.labels.extend([label.item() for label in _label])

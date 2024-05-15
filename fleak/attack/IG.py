@@ -128,9 +128,9 @@ class GradientReconstructor:
                     print(f'Epoch: {i + 1}. Rec. loss: {rec_loss.item():2.4f}.')
 
         if self.convert_label:
-            return dummy_data.detach(), torch.argmax(dummy_label, dim=-1)
+            return dummy_data, torch.argmax(dummy_label, dim=-1)
 
-        return dummy_data.detach(), dummy_label
+        return dummy_data, dummy_label
 
     def _gradient_closure(self, optimizer, criterion, gt_grads, dummy_data, dummy_label):
         def closure():

@@ -37,6 +37,6 @@ def invert_linear_layer(gt_grads, dummy):
     # small trick used in
     inverted_data = torch.max(
         torch.min(inverted_data, (1 - dummy.t_dm) / dummy.t_ds), -dummy.t_dm / dummy.t_ds)
-    dummy.append(inverted_data.detach())
+    dummy.append(inverted_data)
 
     return inverted_data

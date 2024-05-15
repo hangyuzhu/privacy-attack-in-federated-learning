@@ -6,13 +6,12 @@ MODE = ['test', 'valid']
 STRATEGY = ['fedavg', 'fedper', 'fedcrowd', 'fedbcc', 'bcc']
 RESULTS = ['results_fedavg', 'results_fedcrowd', 'results_fedbcc', 'results_bcc']
 
-ATTACKS = ['dlg', 'idlg', 'ig_single', 'ig_multi', 'robbing', 'grnn']
+ATTACKS = ['dlg', 'idlg', 'ig_single', 'ig_multi', 'robbing', 'ggl', 'grnn']
 
 
 def get_model_options(dataset):
     from ..model import MnistMLP, CifarMLP, MnistConvNet, CifarConvNet, \
         ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, FC2
-    from ..model import MnistGenerator, MnistDiscriminator
     model = {
         "mlp": MnistMLP if dataset == 'mnist' else CifarMLP,
         "cnn": MnistConvNet if dataset == 'mnist' else CifarConvNet,

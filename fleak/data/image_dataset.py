@@ -25,6 +25,16 @@ IMAGE_SHAPE = {
     "imagenet": [3, 224, 224],
 }
 
+"""
+
+It should be noticed that, mean & std are probably sensitive to both training and
+reconstruction outcomes !
+
+IMAGE_MEAN & IMAGE_STD are used in the official implementation (pytorch) of image classification tasks
+IMAGE_MEAN_GAN & IMAGE_STD_GAN are used in GAN for generating fake images with higher quality
+
+"""
+# mean & std applied in official pytorch training
 # mean
 IMAGE_MEAN = {
     "mnist": [0.1307, ],
@@ -33,7 +43,6 @@ IMAGE_MEAN = {
     "tiny_imagenet": [0.485, 0.456, 0.406],
     "imagenet": [0.485, 0.456, 0.406],
 }
-
 # std
 IMAGE_STD = {
     "mnist": [0.3081, ],
@@ -41,6 +50,24 @@ IMAGE_STD = {
     "cifar100": [0.2675, 0.2565, 0.2761],
     "tiny_imagenet": [0.229, 0.224, 0.225],
     "imagenet": [0.229, 0.224, 0.225],
+}
+
+# mean & std applied in GAN training
+# mean
+IMAGE_MEAN_GAN = {
+    "mnist": [0.5, ],
+    "cifar10": [0.5, 0.5, 0.5],
+    "cifar100": [0.5, 0.5, 0.5],
+    "tiny_imagenet": [0.5, 0.5, 0.5],
+    "imagenet": [0.5, 0.5, 0.5],
+}
+# std
+IMAGE_STD_GAN = {
+    "mnist": [0.5, ],
+    "cifar10": [0.5, 0.5, 0.5],
+    "cifar100": [0.5, 0.5, 0.5],
+    "tiny_imagenet": [0.5, 0.5, 0.5],
+    "imagenet": [0.5, 0.5, 0.5],
 }
 
 
@@ -97,11 +124,19 @@ class ImageFolderDataset(Dataset):
         return sample, target
 
 
+"""
+
+Caution: IMAGE_MEAN_GAN & IMAGE_STD_GAN are selected here for the purpose of training classifiers
+         with probably more stable performance and generating high-quality fake images
+
+"""
+
+
 def load_mnist_dataset(data_dir, dm=None, ds=None):
     if dm is None:
-        dm = IMAGE_MEAN["mnist"]
+        dm = IMAGE_MEAN_GAN["mnist"]
     if ds is None:
-        ds = IMAGE_STD["mnist"]
+        ds = IMAGE_STD_GAN["mnist"]
     # ToTensor normalize images to 0 ~ 1
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -114,9 +149,9 @@ def load_mnist_dataset(data_dir, dm=None, ds=None):
 
 def load_cifar10_dataset(data_dir, dm=None, ds=None, data_augment=False):
     if dm is None:
-        dm = IMAGE_MEAN["cifar10"]
+        dm = IMAGE_MEAN_GAN["cifar10"]
     if ds is None:
-        ds = IMAGE_STD["cifar10"]
+        ds = IMAGE_STD_GAN["cifar10"]
     if data_augment:
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
@@ -141,9 +176,9 @@ def load_cifar10_dataset(data_dir, dm=None, ds=None, data_augment=False):
 
 def load_cifar100_dataset(data_dir, dm=None, ds=None, data_augment=False):
     if dm is None:
-        dm = IMAGE_MEAN["cifar100"]
+        dm = IMAGE_MEAN_GAN["cifar100"]
     if ds is None:
-        ds = IMAGE_STD["cifar100"]
+        ds = IMAGE_STD_GAN["cifar100"]
     if data_augment:
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
@@ -168,9 +203,9 @@ def load_cifar100_dataset(data_dir, dm=None, ds=None, data_augment=False):
 
 def load_tiny_imagenet_dataset(data_dir, dm=None, ds=None):
     if dm is None:
-        dm = IMAGE_MEAN["tiny_imagenet"]
+        dm = IMAGE_MEAN_GAN["tiny_imagenet"]
     if ds is None:
-        ds = IMAGE_STD["tiny_imagenet"]
+        ds = IMAGE_STD_GAN["tiny_imagenet"]
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(dm, ds),

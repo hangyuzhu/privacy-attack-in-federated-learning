@@ -2,5 +2,6 @@ gan_main.py
 gan_multi_main.py
 tf_gan.py
 saved_results
+saved_models
 *.pyc
 .idea

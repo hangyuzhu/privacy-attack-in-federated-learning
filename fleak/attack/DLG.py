@@ -48,7 +48,7 @@ def dlg(model, grads: list, dummy: TorchDummy, epochs: int, device="cpu"):
         optimizer.step(closure)
 
     # save the dummy data
-    dummy.append(dummy_data.detach())
+    dummy.append(dummy_data)
     # convert dummy label to integer
     rec_dummy_label = torch.argmax(dummy_label, dim=-1)
     # save the dummy label
@@ -99,7 +99,7 @@ def idlg(model, grads, dummy, epochs=300, lr=0.075, device="cpu"):
         optimizer.step(closure)
 
     # save the dummy data
-    dummy.append(dummy_data.detach())
+    dummy.append(dummy_data)
     # save the label prediction
     dummy.append_label(label_pred)
 

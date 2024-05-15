@@ -2,6 +2,9 @@
 
 This is an experimental lib to simulate different leakage attack methods in federated learning.
 
+## Data Processing
+The mean and standard deviation are sensitive to the quality of generated fake images of GAN. We select 0.5 for both of them.
+
 ## Deep Leakage Gradient
 
 ## Improved Leakage Gradient

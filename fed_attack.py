@@ -1,3 +1,4 @@
+import os.path
 import time
 from functools import partial
 
@@ -6,9 +7,10 @@ from fleak.client import Client
 from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS
-from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN, IMAGE_STD
+from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
 from fleak.data.dataloader import generate_dataloaders
 from fleak.model import ImprintModel
+from fleak.model import GGLGenerator
 from fleak.utils.plot import plot_dummy_images
 
 
@@ -38,8 +40,8 @@ def main(args):
         image_shape=IMAGE_SHAPE[args.dataset],
         batch_size=args.rec_batch_size,
         n_classes=N_CLASSES[args.dataset],
-        dm=IMAGE_MEAN[args.dataset],
-        ds=IMAGE_STD[args.dataset],
+        dm=IMAGE_MEAN_GAN[args.dataset],
+        ds=IMAGE_STD_GAN[args.dataset],
         device=args.device,
     )
     n_classes = dummy.n_classes
@@ -53,7 +55,19 @@ def main(args):
         model = partial(ImprintModel, base_module=model, input_shape=dummy.input_shape)
 
     # ======= Create Attacker ========
+    if args.attack == "ggl":
+        import torch
+        generator = GGLGenerator()
+        model_file = os.path.join("saved_models", "ggl_" + args.dataset + ".pth")
+        try:
+            generator.load_state_dict(torch.load(model_file))
+            print("\n###### Pretrained GGL generator has been loaded ######")
+        except:
+            print("\n###### Untrained GGL generator is employed ######")
+    else:
+        generator = None
     server = ServerAttacker(global_model=model(n_classes),
+                            generator=generator,
                             test_loader=test_loader,
                             dummy=dummy,
                             local_epochs=args.num_epochs,
