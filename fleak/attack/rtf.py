@@ -34,7 +34,7 @@ def invert_linear_layer(gt_grads, dummy):
     # batch size of dummy is meaningless here
     inverted_data = inverted_data.reshape(inverted_data.shape[0], *dummy.image_shape)
 
-    # small trick used in
+    # small trick used in inverting gradient
     inverted_data = torch.max(
         torch.min(inverted_data, (1 - dummy.t_dm) / dummy.t_ds), -dummy.t_dm / dummy.t_ds)
     dummy.append(inverted_data)

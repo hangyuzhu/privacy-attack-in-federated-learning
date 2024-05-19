@@ -1,6 +1,6 @@
-""" Inverting Gradients
+""" Inverting Gradients - How easy is it to break privacy in federated learning?
 
- https://proceedings.neurips.cc/paper/2020/file/c4ede56bbd98819ae6112b20ac6bf145-Paper.pdf
+https://proceedings.neurips.cc/paper/2020/file/c4ede56bbd98819ae6112b20ac6bf145-Paper.pdf
 
  """
 
@@ -14,23 +14,24 @@ from .dlg import dummy_criterion
 from ..model import MetaModel
 
 
-def ig_single(model, gt_grads, dummy, rec_epochs=4000, rec_lr=0.1, alpha=1e-6, device="cpu"):
+def ig_single(model, gt_grads, dummy, rec_epochs=4000, rec_lr=0.1, tv=1e-6, device="cpu"):
     """Reconstruct an image from single gradients
 
     Similar to DLG based methods but adopting cosine similarity as the loss function
+    Utilizing Adam other than LBFGS as the optimizer
 
     :param model: inferred model
     :param gt_grads: gradients of the ground-truth data
     :param dummy: TorchDummy object
     :param rec_epochs: number of reconstruct epochs
     :param rec_lr: reconstruct learning rate
-    :param alpha: hyperparameter for TV term
+    :param tv: hyperparameter for TV term
     :param device: cpu or cuda
     :return: dummy data & dummy label
     """
     model.eval()
 
-    reconstructor = GradientReconstructor(model, dummy, rec_epochs, rec_lr, alpha, device)
+    reconstructor = GradientReconstructor(model, dummy, rec_epochs, rec_lr, tv, device)
     dummy_data, dummy_label = reconstructor.reconstruct(gt_grads)
 
     dummy.append(dummy_data)
@@ -40,7 +41,7 @@ def ig_single(model, gt_grads, dummy, rec_epochs=4000, rec_lr=0.1, alpha=1e-6, d
 
 
 def ig_multi(model, gt_grads, dummy, rec_epochs=8000, rec_lr=0.1,
-             local_epochs=5, local_lr=1e-4, alpha=1e-6, device="cpu"):
+             local_epochs=5, local_lr=1e-4, tv=1e-6, device="cpu"):
     """Reconstruct one or multiple images from weights after several SGD steps
 
     Dummy gradients are simulated by multiple steps of SGD
@@ -52,13 +53,13 @@ def ig_multi(model, gt_grads, dummy, rec_epochs=8000, rec_lr=0.1,
     :param rec_lr: reconstruct learning rate
     :param local_epochs: number of epochs for client training
     :param local_lr: learning rate for client training
-    :param alpha: hyperparameter for TV term
+    :param tv: hyperparameter for TV term
     :param device: cpu or cuda
     :return: dummy data & dummy label
     """
     model.eval()
 
-    reconstructor = FedAvgReconstructor(model, dummy, rec_epochs, rec_lr, local_epochs, local_lr, alpha, device)
+    reconstructor = FedAvgReconstructor(model, dummy, rec_epochs, rec_lr, local_epochs, local_lr, tv, device)
     dummy_data, dummy_label = reconstructor.reconstruct(gt_grads)
 
     dummy.append(dummy_data)
@@ -69,21 +70,21 @@ def ig_multi(model, gt_grads, dummy, rec_epochs=8000, rec_lr=0.1,
 class GradientReconstructor:
     """Reconstruct an image from gradient after single step of gradient descent"""
 
-    def __init__(self, model, dummy, epochs, lr, alpha, device):
+    def __init__(self, model, dummy, epochs, lr, tv, device):
         """
 
         :param model: inferred model
         :param dummy: TorchDummy object
         :param epochs: reconstruct epochs
         :param lr: reconstruct learning rate
-        :param alpha: hyperparameter for TV term
+        :param tv: hyperparameter for TV term
         :param device: cpu or cuda
         """
         self.model = model
         self.dummy = dummy
         self.epochs = epochs
         self.lr = lr
-        self.alpha = alpha
+        self.tv = tv
         self.device = device
 
         # if converting labels to integers
@@ -142,7 +143,7 @@ class GradientReconstructor:
             dummy_grads = torch.autograd.grad(dummy_loss, self.model.parameters(), create_graph=True)
 
             rec_loss = cosine_similarity_loss(dummy_grads, gt_grads)
-            rec_loss += self.alpha * total_variation(dummy_data)
+            rec_loss += self.tv * total_variation(dummy_data)
             rec_loss.backward()
 
             # small trick 1: convert the grad to 1 or -1
@@ -159,13 +160,13 @@ class FedAvgReconstructor(GradientReconstructor):
 
     """
 
-    def __init__(self, model, dummy, epochs, lr, local_epochs, local_lr, alpha, device):
+    def __init__(self, model, dummy, epochs, lr, local_epochs, local_lr, tv, device):
         super(FedAvgReconstructor, self).__init__(
             model=model,
             dummy=dummy,
             epochs=epochs,
             lr=lr,
-            alpha=alpha,
+            tv=tv,
             device=device,
         )
         self.local_epochs = local_epochs
@@ -180,7 +181,7 @@ class FedAvgReconstructor(GradientReconstructor):
                 self.model, dummy_data, dummy_label, criterion, self.local_epochs, self.local_lr
             )
             rec_loss = cosine_similarity_loss(dummy_grads, gt_grads)
-            rec_loss += self.alpha * total_variation(dummy_data)
+            rec_loss += self.tv * total_variation(dummy_data)
             rec_loss.backward()
 
             # small trick 1: convert the grad to 1 or -1

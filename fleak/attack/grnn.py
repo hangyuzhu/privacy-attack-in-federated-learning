@@ -19,6 +19,7 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
     Instead of directly recovering dummy data, GRNN optimizes the parameters of a Generator
     Dummy data are generated from random noise through a Generator
     Loss function is constructed by DLG loss + WD loss + TV loss
+    RMSprop is utilized as the reconstruction optimizer
 
     :param model: inferred model
     :param gt_grads: gradients of the ground-truth data
