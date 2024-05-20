@@ -9,8 +9,14 @@ from .ig import GradientReconstructor
 from .ig import total_variation
 
 
-def cpa(model, gt_grads, dummy, device):
+def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, device):
     model.eval()
+
+    attacker = CocktailPartyAttack(model, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, device)
+    dummy_data = attacker.reconstruct(gt_grads)
+
+    dummy.append(dummy_data)
+    return dummy_data
 
 
 class CocktailPartyAttack(GradientReconstructor):
@@ -32,84 +38,12 @@ class CocktailPartyAttack(GradientReconstructor):
         self.a = 1
         self.eps = torch.tensor(1e-20, device=self.device)
 
-        # exp_path = get_attack_exp_path(self.args)
-        # self.w_pkl_file = f"{exp_path}/w_{self.n_comp}_{self.batch_id}.pkl"
-        # self.X = self.grads[self.model.attack_index]
-        # self.X_zc, self.X_mu = self.zero_center(self.X)
-        #
-        # if exists(self.w_pkl_file):
-        #     w_data = read_pickle(self.w_pkl_file)
-        #     self.X_w, self.W_w = w_data["X_w"].to(self.device), w_data["W_w"].to(
-        #         self.device
-        #     )
-        #     print(f"loaded w data from {self.w_pkl_file}")
-        # else:
-        #     self.X_w, self.W_w = self.whiten(self.X_zc)
-        #     write_pickle(
-        #         {"X_w": self.X_w.detach().cpu(), "W_w": self.W_w.detach().cpu()},
-        #         self.w_pkl_file,
-        #     )
-        #
-        # self.W_hat = torch.empty(
-        #     [self.n_comp, self.n_comp],
-        #     dtype=torch.float,
-        #     requires_grad=True,
-        #     device=self.device,
-        # )
-        # torch.nn.init.eye_(self.W_hat)
-        # param_list = [self.W_hat]
-        #
-        # self.opt = get_opt(param_list, self.args.opt, lr=self.args.lr)
-        # self.sch = get_sch(self.args.sch, self.opt, epochs=self.args.n_iter)
-        # self.a = 1
-
-    # def set_inp_type(self):
-    #     if ds_type_dict[self.ds] == "image" and self.model.model_type == "fc":
-    #         self.inp_type = "image"
-    #         self.inp_shape = [self.n_comp] + xshape_dict[self.ds]
-    #     else:
-    #         self.inp_type = "emb"
-    #         self.inp_shape = [self.n_comp, -1]
-
-    def zero_center(self, x):
-        x_mu = x.mean(dim=-1, keepdims=True)
-        return x - x_mu, x_mu
-
-    def whiten(self, x):
-        cov = torch.matmul(x, x.T) / (x.shape[1] - 1)
-        eig_vals, eig_vecs = torch.linalg.eig(cov)
-        topk_indices = torch.topk(eig_vals.float().abs(), self.dummy.batch_size)[1]
-
-        lamb = eig_vals.float()[topk_indices].abs()
-        lamb_inv_sqrt = torch.diag(1 / (torch.sqrt(lamb) + self.eps)).float()
-        W = torch.matmul(lamb_inv_sqrt, eig_vecs.float().T[topk_indices]).float()
-        x_w = torch.matmul(W, x)
-        return x_w, W
-
     def reconstruct(self, gt_grads):
-        # for batch in range(attack_log.batch, args.n_batch):
-        #     # get a batch of inputs
-        #     inp_key = "x"
-        #     inp = torch.tensor(grad_data[inp_key][batch], device=device)
-        #     emb = torch.tensor(
-        #         grad_data["z"][batch] if len(grad_data["z"]) > 0 else [], device=device
-        #     )
-        #     labels = torch.tensor(grad_data["y"][batch], device=device)
-        #     grads = [torch.tensor(g, device=device) for g in grad_data["grad"][batch]]
-        #
-        #     attack_log.update_batch(batch, inp, emb, grads)
-        #
-        #     if attack_log.attack_mode == "gi":
-        #         # === Gradient Inversion ===
-        #         gi = get_gi(args.attack, model, grads, labels, args, batch, attack_log)
-        #         pbar = get_pbar(range(gi.start_iter, args.n_iter), disable=True)
-        #         eval = get_eval(
-        #             inp, emb, model.model_type, ds_type_dict[args.ds], args.attack, fi=False
-        #         )
-
+        # attack weights of the linear layer
         invert_grads = gt_grads[self.model.attack_index]
-        g_zc, g_mu = self.zero_center(invert_grads)
-        g_w, w_w = self.whiten(g_zc)
+        # center & whiten the ground truth gradients
+        grads_zc, grads_mu = self.zero_center(invert_grads)
+        grads_w, w = self.whiten(grads_zc)
 
         U = torch.empty(
             [self.dummy.batch_size, self.dummy.batch_size],
@@ -123,42 +57,53 @@ class CocktailPartyAttack(GradientReconstructor):
         pbar = tqdm(range(self.epochs),
                     total=self.epochs,
                     desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
-        for iter in pbar:
-            loss = self._gradient_closure(optimizer, U, g_w, w_w, g_mu)
+        # optimizing unmixing matrix U
+        for _ in pbar:
+            optimizer.zero_grad()
+            loss = self._build_loss(U, grads_w, w, grads_mu)
             loss.backward()
             optimizer.step()
 
         with torch.no_grad():
             U_norm = U / (U.norm(dim=-1, keepdim=True) + self.eps)
-            X_hat = torch.matmul(U_norm, g_w)
-            X_hat = X_hat + torch.matmul(torch.matmul(U_norm, w_w), g_mu)
+            X_hat = torch.matmul(U_norm, grads_w)
+            X_hat = X_hat + torch.matmul(torch.matmul(U_norm, w), grads_mu)
             X_hat = X_hat.detach().view(self.dummy.input_shape)
-            X_hat = normalize(X_hat)
 
-        return X_hat
+        # normalize the reconstructed data
+        return normalize(X_hat)
 
-    def _gradient_closure(self, optimizer, U, g_w, w_w, g_mu, *args):
+    def _build_loss(self, U, grads_w, w, grads_mu):
+        """Construct the loss function of CPA
+
+        :param U: unmixing matrix U
+        :param grads_w: whitened gradients
+        :param w: whiten transformation matrix
+        :param grads_mu: mean of gradient outputs
+        :return: loss
+        """
         loss_ne = loss_decor = loss_nv = loss_tv = loss_l1 = torch.tensor(
             0.0, device=self.device
         )
 
-        optimizer.zero_grad()
         U_norm = U / (U.norm(dim=-1, keepdim=True) + self.eps)
 
         # Neg Entropy Loss
-        X_hat = torch.matmul(U_norm, g_w)
+        X_hat = torch.matmul(U_norm, grads_w)
 
         if torch.isnan(X_hat).any():
             raise ValueError(f"S_hat has NaN")
 
         if self.ne > 0:
+            # A high value of negentropy indicates a high degree of non-Gaussianity.
             loss_ne = -(((1 / self.a) * torch.log(torch.cosh(self.a * X_hat) + self.eps).mean(dim=-1)) ** 2).mean()
 
         # Undo centering, whitening
-        X_hat = X_hat + torch.matmul(torch.matmul(U_norm, w_w), g_mu)
+        X_hat = X_hat + torch.matmul(torch.matmul(U_norm, w), grads_mu)
 
         # Decorrelation Loss (decorrelate i-th row with j-th row, s.t. j>i)
         if self.decor > 0:
+            # We assume that the source signals are independently chosen and thus their values are uncorrelated
             cos_matrix = torch.matmul(U_norm, U_norm.T).abs()
             loss_decor = (torch.exp(cos_matrix * self.T) - 1).mean()
 
@@ -167,11 +112,14 @@ class CocktailPartyAttack(GradientReconstructor):
             loss_tv = total_variation(X_hat.view(self.dummy.input_shape))
 
         if self.nv > 0:
+            # sign regularization function for leaking private embeddings
+            # Minimizing loss_nv ensures that z is either non-negative or non-positive.
             loss_nv = torch.minimum(
                 F.relu(-X_hat).norm(dim=-1), F.relu(X_hat).norm(dim=-1)
             ).mean()
 
         if self.l1 > 0:
+            # l1-norm: embedding is sparse
             loss_l1 = torch.abs(X_hat).mean()
 
         loss = (
@@ -183,30 +131,37 @@ class CocktailPartyAttack(GradientReconstructor):
         )
         return loss
 
-        # loss.backward()
-        # self.opt.step()
-        # if self.sch:
-        #     self.sch.step()
-        # loss_dict = self.make_dict(
-        #     [
-        #         "loss",
-        #         "loss_ne",
-        #         "loss_decor",
-        #         "loss_tv",
-        #         "loss_nv",
-        #         "loss_l1",
-        #     ],
-        #     [
-        #         loss,
-        #         loss_ne,
-        #         loss_decor,
-        #         loss_tv,
-        #         loss_nv,
-        #         loss_l1,
-        #     ],
-        # )
-        #
-        # return loss_dict
+    @staticmethod
+    def zero_center(x):
+        # centering across the input dimension of the weights
+        x_mu = x.mean(dim=-1, keepdims=True)  # channel first
+        return x - x_mu, x_mu
+
+    def whiten(self, x):
+        """Whitening the gradients
+
+        Purpose: 1) Project the dataset onto the eigenvectors.
+                    This rotates the dataset so that there is no correlation between the components.
+                 2) Normalize the dataset to have a variance of 1 for all components.
+
+        Due to the 'channel first' characteristics of cudnn,
+        transpose operation should be applied to PCA processing
+
+        :param x: centered gradients
+        :return: whitened gradients & normalized eigenvectors
+        """
+        cov = torch.matmul(x, x.T) / (x.shape[1] - 1)
+        eig_vals, eig_vecs = torch.linalg.eig(cov)
+        # select top k (k = batch_size) of eigenvectors
+        # make sure the output dimension of the linear layer is larger than batch size
+        topk_indices = torch.topk(eig_vals.float().abs(), self.dummy.batch_size)[1]
+
+        lamb = eig_vals.float()[topk_indices].abs()
+        # whiten transformation: normalize the dataset to have a variance of 1 for all components.
+        lamb_inv_sqrt = torch.diag(1 / (torch.sqrt(lamb) + self.eps)).float()
+        W = torch.matmul(lamb_inv_sqrt, eig_vecs.float().T[topk_indices]).float()
+        x_w = torch.matmul(W, x)
+        return x_w, W
 
 
 def normalize(inp, method=None):

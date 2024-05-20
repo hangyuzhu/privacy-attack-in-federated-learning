@@ -6,7 +6,7 @@ MODE = ['test', 'valid']
 STRATEGY = ['fedavg', 'fedper', 'fedcrowd', 'fedbcc', 'bcc']
 RESULTS = ['results_fedavg', 'results_fedcrowd', 'results_fedbcc', 'results_bcc']
 
-ATTACKS = ['dlg', 'idlg', 'ig_single', 'ig_multi', 'robbing', 'ggl', 'grnn']
+ATTACKS = ['dlg', 'idlg', 'ig_single', 'ig_multi', 'robbing', 'ggl', 'grnn', 'cpa']
 
 
 def get_model_options(dataset):

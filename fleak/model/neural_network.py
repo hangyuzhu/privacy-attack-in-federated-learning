@@ -6,11 +6,12 @@ Caution: If the model is required to be wrapped by MetaModel, all the modules sh
 
 """
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from fleak.data.image_dataset import IMAGE_SHAPE, N_CLASSES
+
+from ..data.image_dataset import IMAGE_SHAPE
 
 
 class MnistLeNet5(nn.Module):
@@ -128,6 +129,29 @@ class CifarMLP(nn.Module):
         x = self.relu2(self.fc2(x))
         x = self.fc3(x)
         return x
+
+
+class FC2(nn.Module):
+    """
+
+    Linear model adopted in CPA
+
+    """
+
+    def __init__(self, num_classes, x_dim=math.prod(IMAGE_SHAPE["tiny_imagenet"]), h_dim=256):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(x_dim, h_dim),
+            nn.ReLU(),
+        )
+        self.final = nn.Linear(h_dim, num_classes)
+        self.attack_index = 0
+        self.pretrained = False
+
+    def forward(self, x):
+        x = torch.flatten(x, start_dim=1, end_dim=-1)
+        x = self.net(x)
+        return self.final(x)
 
 
 class CifarConvNet(nn.Module):
@@ -268,25 +292,3 @@ def ResNet101(num_classes):
 
 def ResNet152(num_classes):
     return ResNet(Bottleneck, [3, 8, 36, 3], num_classes)
-
-
-class FC2(nn.Module):
-    def __init__(self, ds="tiny_imagenet", h_dim=256, **kwargs):
-        super().__init__()
-
-        x_dim = np.prod(xshape_dict[ds])
-        n_classes = nclasses_dict[ds]
-        self.net = nn.Sequential(
-            nn.Linear(x_dim, h_dim),
-            nn.ReLU(),
-        )
-        self.final = nn.Linear(h_dim, n_classes)
-        self.cpa_attack_layer_index = 0
-        self.model_type = "fc"
-        self.attack_index = 0
-        self.pretrained = False
-
-    def forward(self, x, **kwargs):
-        x = torch.flatten(x, start_dim=1, end_dim=-1)
-        x = self.net(x)
-        return self.final(x)

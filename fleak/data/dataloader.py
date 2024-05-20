@@ -7,8 +7,10 @@ from .partition import partition_dataset
 def generate_dataloaders(dataset: str, data_dir: str, data_augment: bool, p_method: dict, n_parties,
                          valid_prop=0, test_prop=0.2, batch_size=50, verbose=True):
     """
+
     Construct 3 dataloaders for clients and 1 test dataloader for the server
     This method is applicable for pfl approaches
+
     :param dataset: name of the dataset
     :param data_dir: path of dataset
     :param data_augment: if using data augmentation

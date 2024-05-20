@@ -4,8 +4,9 @@ from typing import Any, Tuple
 import torch
 from torch.utils.data import Dataset
 import torchvision
-from torchvision.datasets.folder import default_loader
 from torchvision import datasets, transforms
+from torchvision.datasets import ImageFolder
+from torchvision.datasets.folder import default_loader
 
 
 N_CLASSES = {
@@ -78,6 +79,32 @@ class UnNormalize(torchvision.transforms.Normalize):
         new_mean = [-m/s for m, s in zip(mean, std)]
         new_std = [1/s for s in std]
         super().__init__(new_mean, new_std, *args, **kwargs)
+
+
+class TinyImageNet(ImageFolder):
+
+    def __init__(
+        self,
+        root: str,
+        train=True,
+        transform=None,
+        target_transform=None
+    ) -> None:
+        subfolder = "train" if train else "val"
+        root_sub = os.path.join(root, subfolder)
+
+        if not os.path.exists(root):
+            raise ValueError(
+                "Dataset not found at {}. Please download it from {}.".format(
+                    root, "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
+                )
+            )
+
+        super().__init__(
+            root=root_sub,
+            transform=transform,
+            target_transform=target_transform
+        )
 
 
 class DatasetSplit(Dataset):
@@ -201,15 +228,27 @@ def load_cifar100_dataset(data_dir, dm=None, ds=None, data_augment=False):
     return train_dataset, test_dataset
 
 
-def load_tiny_imagenet_dataset(data_dir, dm=None, ds=None):
+def load_tiny_imagenet_dataset(data_dir, dm=None, ds=None, data_augment=False):
     if dm is None:
         dm = IMAGE_MEAN_GAN["tiny_imagenet"]
     if ds is None:
         ds = IMAGE_STD_GAN["tiny_imagenet"]
-    transform = transforms.Compose([
+    if data_augment:
+        transform_train = transforms.Compose([
+            transforms.RandomResizedCrop(64),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(dm, ds)
+        ])
+    else:
+        transform_train = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(dm, ds)
+        ])
+    transform_eval = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(dm, ds),
     ])
-    train_dataset = datasets.ImageFolder(os.path.join(data_dir, 'train'), transform=transform)
-    test_dataset = datasets.ImageFolder(os.path.join(data_dir, 'val'), transform=transform)
+    train_dataset = TinyImageNet(data_dir, train=True, transform=transform_train)
+    test_dataset = TinyImageNet(data_dir, train=False, transform=transform_eval)
     return train_dataset, test_dataset

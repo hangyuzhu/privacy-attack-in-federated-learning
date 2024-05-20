@@ -1,5 +1,5 @@
 from .server import Server
-from .server_attack import ServerAttacker
+from .server import ServerAttacker
 
 
 __all__ = {
