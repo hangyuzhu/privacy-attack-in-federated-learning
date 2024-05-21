@@ -10,6 +10,7 @@ from .neural_network import ResNet152
 from .neural_network import FC2
 
 from .gan import GGLGenerator
+from .gan import MnistGenerator
 from .gan import MnistDiscriminator
 from .gan import CifarDiscriminator
 
@@ -30,6 +31,7 @@ __all__ = {
     "FC2",
 
     "GGLGenerator",
+    "MnistGenerator",
     "MnistDiscriminator",
     "CifarDiscriminator",
 

@@ -73,13 +73,13 @@ class TorchDummy:
 class TorchDummyImage(TorchDummy):
 
     def __init__(
-            self,
-            image_shape: list,
-            batch_size: int,
-            n_classes: int,
-            dm: Union[list, tuple],
-            ds: Union[list, tuple],
-            device: str
+        self,
+        image_shape: list,
+        batch_size: int,
+        n_classes: int,
+        dm: Union[list, tuple],
+        ds: Union[list, tuple],
+        device: str
     ):
         """
 
@@ -100,12 +100,12 @@ class TorchDummyImage(TorchDummy):
         # label shape [N, C]
         label_shape = [batch_size, self.n_classes]
         super().__init__(
-            _input_shape=[batch_size, *image_shape],
-            _label_shape=label_shape,
-            batch_size=batch_size,
-            dm=dm,
-            ds=ds,
-            device=device,
+                _input_shape=[batch_size, *image_shape],
+                _label_shape=label_shape,
+                batch_size=batch_size,
+                dm=dm,
+                ds=ds,
+                device=device,
         )
         # inverse transform operator
         self._it = transforms.Compose([
