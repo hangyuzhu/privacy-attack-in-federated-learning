@@ -15,7 +15,7 @@ def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, de
     attacker = CocktailPartyAttack(model, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, device)
     dummy_data = attacker.reconstruct(gt_grads)
 
-    dummy.append(dummy_data)
+    dummy.append(dummy_data, method="infer")
     return dummy_data
 
 
