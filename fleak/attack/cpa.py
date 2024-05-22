@@ -10,10 +10,26 @@ from .ig import total_variation
 
 
 def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, device):
+    # ensure the model type
+    assert model.model_type in ["cpa_cov", "cpa_fc2"]
     model.eval()
 
-    attacker = CocktailPartyAttack(model, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, device)
-    dummy_data = attacker.reconstruct(gt_grads)
+    if model.model_type == "cpa_fc2":
+        inp_type = "image"
+    elif model.model_type == "cpa_cov":
+        inp_type = "emb"
+    else:
+        raise ValueError(f"Unexpected model type {model.model_type}")
+
+    gi = CocktailPartyAttack(model, dummy, rec_epochs, inp_type, rec_lr, ne, decor, T, tv, nv, l1, device)
+    rec_gi = gi.reconstruct(gt_grads)
+
+    if inp_type == "emb":
+        fi = DirectReconstructor(model, dummy, rec_epochs, rec_lr, 1, 0.1, device)
+        rec_fi = fi.reconstruct(rec_gi)
+        dummy_data = rec_fi
+    else:
+        dummy_data = rec_gi
 
     dummy.append(dummy_data, method="infer")
     return dummy_data
@@ -21,7 +37,8 @@ def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, de
 
 class CocktailPartyAttack(GradientReconstructor):
 
-    def __init__(self, model, dummy, epochs, lr, ne, decor, T, tv, nv, l1, device):
+    def __init__(self, model, dummy, epochs, inp_type, lr, ne, decor, T, tv, nv, l1, device):
+        assert inp_type in ["image", "emb"]
         super(CocktailPartyAttack, self).__init__(
             model=model,
             dummy=dummy,
@@ -30,6 +47,11 @@ class CocktailPartyAttack(GradientReconstructor):
             tv=tv,
             device=device
         )
+        self.inp_type = inp_type
+        if self.inp_type == "image":
+            self.inp_shape = dummy.input_shape
+        else:
+            self.inp_shape = [dummy.batch_size, -1]
         self.ne = ne
         self.decor = decor
         self.T = T
@@ -68,17 +90,19 @@ class CocktailPartyAttack(GradientReconstructor):
             U_norm = U / (U.norm(dim=-1, keepdim=True) + self.eps)
             X_hat = torch.matmul(U_norm, grads_w)
             X_hat = X_hat + torch.matmul(torch.matmul(U_norm, w), grads_mu)
-            X_hat = X_hat.detach().view(self.dummy.input_shape)
+            X_hat = X_hat.detach().view(self.inp_shape)
+            if self.inp_type == "image":
+                # normalize the reconstructed image data
+                X_hat = normalize(X_hat, self.dummy, method="infer")
 
-        # normalize the reconstructed data
-        return normalize(X_hat)
+        return X_hat
 
     def _build_loss(self, U, grads_w, w, grads_mu):
         """Construct the loss function of CPA
 
         :param U: unmixing matrix U
         :param grads_w: whitened gradients
-        :param w: whiten transformation matrix
+        :param w: normalized eigenvectors
         :param grads_mu: mean of gradient outputs
         :return: loss
         """
@@ -109,7 +133,7 @@ class CocktailPartyAttack(GradientReconstructor):
 
         # Prior Loss
         if self.tv > 0 and self.nv == 0:  # if nv > 0, tv is meant for the generator
-            loss_tv = total_variation(X_hat.view(self.dummy.input_shape))
+            loss_tv = total_variation(X_hat.view(self.inp_shape))
 
         if self.nv > 0:
             # sign regularization function for leaking private embeddings
@@ -147,7 +171,7 @@ class CocktailPartyAttack(GradientReconstructor):
         Due to the 'channel first' characteristics of cudnn,
         transpose operation should be applied to PCA processing
 
-        :param x: centered gradients
+        :param x: centered gradients with shape (d_out, d_in)
         :return: whitened gradients & normalized eigenvectors
         """
         cov = torch.matmul(x, x.T) / (x.shape[1] - 1)
@@ -158,13 +182,79 @@ class CocktailPartyAttack(GradientReconstructor):
 
         lamb = eig_vals.float()[topk_indices].abs()
         # whiten transformation: normalize the dataset to have a variance of 1 for all components.
-        lamb_inv_sqrt = torch.diag(1 / (torch.sqrt(lamb) + self.eps)).float()
-        W = torch.matmul(lamb_inv_sqrt, eig_vecs.float().T[topk_indices]).float()
-        x_w = torch.matmul(W, x)
-        return x_w, W
+        lamb_inv_sqrt = torch.diag(1 / (torch.sqrt(lamb) + self.eps)).float()  # b x b
+        n_eig_vecs = torch.matmul(lamb_inv_sqrt, eig_vecs.float().T[topk_indices]).float()  # b x b * b x d_out
+        x_w = torch.matmul(n_eig_vecs, x)
+        return x_w, n_eig_vecs
 
 
-def normalize(inp, method=None):
+class DirectReconstructor:
+
+    def __init__(self, model, dummy, rec_epochs, lr, fi, tv, device):
+        self.model = model
+        self.dummy = dummy
+        self.rec_epochs = rec_epochs
+        self.lr = lr
+        self.fi = fi
+        self.tv = tv
+        self.lr = lr
+
+        self.device = device
+
+        for p in self.model.parameters():
+            p.requires_grad = False
+
+    def reconstruct(self, rec_z):
+        dummy_data = self.dummy.generate_dummy_input(device=self.device)
+        optimizer = optim.Adam([dummy_data], lr=self.lr, weight_decay=0)
+        cosine_similarity = nn.CosineSimilarity(dim=-1, eps=1e-10).to(self.device)
+
+        # optimizer the fake data through reconstructed latent inputs
+        pbar = tqdm(range(self.rec_epochs),
+                    total=self.rec_epochs,
+                    desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
+
+        for _ in pbar:
+            optimizer.zero_grad()
+            loss = self._build_loss(cosine_similarity, rec_z, dummy_data)
+            loss.backward()
+            optimizer.step()
+
+        # small trick
+        dummy_data = normalize(dummy_data.detach(), self.dummy, method="ds")
+        return dummy_data
+
+    def _build_loss(self, cs_criterion, rec_z, dummy_data):
+        loss_fi = loss_tv = torch.tensor(0.0, device=self.device)
+
+        # Box Image (small trick)
+        dummy_data.data = torch.max(
+            torch.min(dummy_data, (1 - self.dummy.t_dm) / self.dummy.t_ds),
+            -self.dummy.t_dm / self.dummy.t_ds
+        )
+
+        _, z_hat = self.model(dummy_data, return_z=True)
+        if self.fi > 0:
+            loss_fi = (1 - cs_criterion(rec_z, z_hat)).mean()
+
+        if self.tv > 0:
+            loss_tv = total_variation(dummy_data)
+
+        loss = self.fi * loss_fi + self.tv * loss_tv
+        return loss
+
+
+def normalize(inp, dummy, method=None):
+    """Normalize data
+
+    infer: trick proposed by CPA
+    ds: trick proposed by inverting gradients
+
+    :param inp: input data
+    :param dummy: TorchDummy object
+    :param method: infer or ds
+    :return: normalized data
+    """
     if method is None:
         pass
     elif method == "infer":
@@ -175,6 +265,10 @@ def normalize(inp, method=None):
             inp.max(dim=-1, keepdim=True)[0] - inp.min(dim=-1, keepdim=True)[0]
         )
         inp = inp.view(orig_shape)
+    elif method == "ds":
+        mean = dummy.t_dm
+        std = dummy.t_ds
+        inp = torch.clamp((inp * std) + mean, 0, 1)
     else:
         raise ValueError(f"Unknown method {method}")
     return inp

@@ -168,13 +168,13 @@ class ServerAttacker(Server):
             ig_multi(
                 self.global_model, local_grads, self.dummy,
                 8000, 0.1, self.local_epochs, self.local_lr, 1e-6, self.device)
-        elif method == "robbing":
+        elif method == "rtf":
             invert_linear_layer(local_grads, self.dummy)
         elif method == "ggl":
             ggl(self.global_model, self.generator, local_grads, self.dummy, 25000, self.device)
         elif method == "grnn":
             grnn(self.global_model, local_grads, self.dummy, 1000, 1e-3, self.device)
         elif method == "cpa":
-            cpa(self.global_model, local_grads, self.dummy, 25000, 0.001, 1, 1.47, 12.4, 3.1, 0, 0, self.device)
+            cpa(self.global_model, local_grads, self.dummy, 25000, 0.001, 1, 5.3, 7.7, 0.1, 0.13, 5, self.device)
         else:
             raise ValueError("Unexpected {} Attack Type.".format(method))

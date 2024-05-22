@@ -88,7 +88,6 @@ def main(args):
                    for i in range(args.total_clients)]
 
     # ======= Federated Simulation ========
-    start = time.time()
     eval_accuracy = []
 
     for i in range(args.num_rounds):
@@ -105,7 +104,7 @@ def main(args):
         # attack
         server.attack(method=args.attack)
 
-        """before or after ?"""
+        # federated aggregation
         server.federated_averaging()
         duration_time = time.time() - start_time
         print('One communication round training time: %.4fs' % duration_time)
