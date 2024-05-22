@@ -238,17 +238,16 @@ class CifarVGG(nn.Module):
         super().__init__()
 
         self.features = make_layers(cfgs, batch_norm=False)
-        self.avgpool = nn.AdaptiveAvgPool2d((2, 2))
-
         self.classifier = nn.Sequential(
-            nn.Linear(512 * 1 * 1, 256),
+            nn.Dropout(p=dropout),
+            nn.Linear(512, 512),
             nn.ReLU(True),
             nn.Dropout(p=dropout),
-            nn.Linear(256, 256),
+            nn.Linear(512, 512),
             nn.ReLU(True),
-            nn.Dropout(p=dropout),
-            nn.Linear(256, num_classes),
+            nn.Linear(512, num_classes),
         )
+
         if init_weights:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
@@ -268,7 +267,6 @@ class CifarVGG(nn.Module):
 
     def forward(self, x: torch.Tensor, return_z=False) -> torch.Tensor:
         x = self.features(x)
-        x = self.avgpool(x)
         z = torch.flatten(x, 1)
         x = self.classifier(z)
         if return_z:
