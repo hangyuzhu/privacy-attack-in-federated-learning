@@ -175,6 +175,6 @@ class ServerAttacker(Server):
         elif method == "grnn":
             grnn(self.global_model, local_grads, self.dummy, 1000, 1e-3, self.device)
         elif method == "cpa":
-            cpa(self.global_model, local_grads, self.dummy, 25000, 0.001, 1, 5.3, 7.7, 0.1, 0.13, 5, self.device)
+            cpa(self.global_model, local_grads, self.dummy, 25000, 0.001, 5.3, 7.7, 0.1, 0.13, 5, 1, self.device)
         else:
             raise ValueError("Unexpected {} Attack Type.".format(method))

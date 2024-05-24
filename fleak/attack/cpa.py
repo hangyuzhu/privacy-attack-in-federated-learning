@@ -1,3 +1,9 @@
+"""Cocktail Party Attack
+
+https://proceedings.mlr.press/v202/kariyappa23a/kariyappa23a.pdf
+
+"""
+
 import time
 from tqdm import tqdm
 import torch
@@ -9,7 +15,27 @@ from .ig import GradientReconstructor
 from .ig import total_variation
 
 
-def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, device):
+def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, decor, T, tv, nv, l1, fi, device):
+    """Cocktail Party Attack (CPA)
+
+    The core idea is to adopt independent component analysis (ICA) to recover inputs from aggregated gradients
+    1) For MLPs, utilize CPA to directly recover private inputs
+    2) For CNNs, utilize CPA to recover embeddings, and further adopt feature inversion to recover inputs
+
+    :param model: inferred model
+    :param gt_grads: gradients of ground-truth data
+    :param dummy: TorchDummy object
+    :param rec_epochs: reconstruct epochs
+    :param rec_lr: reconstruct learning rate
+    :param decor: decorrelation weight
+    :param T: temperature for cosine similarity when computing decor loss in CPA
+    :param tv: total Variation prior weight
+    :param nv: negative value penalty
+    :param l1: hyperparameter of l1-norm
+    :param fi: feature inversion weight
+    :param device: cpu or cuda
+    :return: dummy data
+    """
     # ensure the model type
     assert model.model_type in ["cpa_cov", "cpa_fc2"]
     model.eval()
@@ -21,12 +47,13 @@ def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, de
     else:
         raise ValueError(f"Unexpected model type {model.model_type}")
 
-    gi = CocktailPartyAttack(model, dummy, rec_epochs, inp_type, rec_lr, ne, decor, T, tv, nv, l1, device)
+    gi = CocktailPartyAttack(model, dummy, rec_epochs, inp_type, rec_lr, decor, T, tv, nv, l1, device)
     rec_gi = gi.reconstruct(gt_grads)
 
     if inp_type == "emb":
-        fi = DirectReconstructor(model, dummy, rec_epochs, rec_lr, 1, 0.1, device)
-        rec_fi = fi.reconstruct(rec_gi)
+        fi = FeatureInversionAttack(model, dummy, rec_epochs, rec_lr, fi, tv, device)
+        # make recovered embeds positive
+        rec_fi = fi.reconstruct(rec_gi.abs())
         dummy_data = rec_fi
     else:
         dummy_data = rec_gi
@@ -36,8 +63,28 @@ def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, ne, decor, T, tv, nv, l1, de
 
 
 class CocktailPartyAttack(GradientReconstructor):
+    """
 
-    def __init__(self, model, dummy, epochs, inp_type, lr, ne, decor, T, tv, nv, l1, device):
+    Frame a BSS problem and adapt ICA to recover the private inputs
+    from aggregate gradient/weight updates
+
+    """
+
+    def __init__(self, model, dummy, epochs, inp_type, lr, decor, T, tv, nv, l1, device):
+        """
+
+        :param model: inferred model
+        :param dummy: TorchDummy object
+        :param epochs: reconstruct epochs
+        :param inp_type: image & emb
+        :param lr: reconstruct learning rate
+        :param decor: decorrelation weight (CPA)
+        :param T: temperature for cosine similarity when computing decor loss in CPA
+        :param tv: total Variation prior weight
+        :param nv: negative value penalty
+        :param l1: hyperparameter of l1-norm
+        :param device: cpu or cuda
+        """
         assert inp_type in ["image", "emb"]
         super(CocktailPartyAttack, self).__init__(
             model=model,
@@ -52,7 +99,6 @@ class CocktailPartyAttack(GradientReconstructor):
             self.inp_shape = dummy.input_shape
         else:
             self.inp_shape = [dummy.batch_size, -1]
-        self.ne = ne
         self.decor = decor
         self.T = T
         self.nv = nv
@@ -61,6 +107,11 @@ class CocktailPartyAttack(GradientReconstructor):
         self.eps = torch.tensor(1e-20, device=self.device)
 
     def reconstruct(self, gt_grads):
+        """Reconstruct private inputs or embeddings
+
+        :param gt_grads: gradients of ground truth data
+        :return: Private inputs or embeddings
+        """
         # attack weights of the linear layer
         invert_grads = gt_grads[self.model.attack_index]
         # center & whiten the ground truth gradients
@@ -89,6 +140,7 @@ class CocktailPartyAttack(GradientReconstructor):
         with torch.no_grad():
             U_norm = U / (U.norm(dim=-1, keepdim=True) + self.eps)
             X_hat = torch.matmul(U_norm, grads_w)
+            # undo whitening & centering
             X_hat = X_hat + torch.matmul(torch.matmul(U_norm, w), grads_mu)
             X_hat = X_hat.detach().view(self.inp_shape)
             if self.inp_type == "image":
@@ -100,16 +152,20 @@ class CocktailPartyAttack(GradientReconstructor):
     def _build_loss(self, U, grads_w, w, grads_mu):
         """Construct the loss function of CPA
 
+        1) Reconstruct image: NE loss + MI loss + TV loss
+        2) Reconstruct embed: NE loss + MI loss + NV loss + l1 norm
+
         :param U: unmixing matrix U
         :param grads_w: whitened gradients
         :param w: normalized eigenvectors
         :param grads_mu: mean of gradient outputs
         :return: loss
         """
-        loss_ne = loss_decor = loss_nv = loss_tv = loss_l1 = torch.tensor(
+        loss_decor = loss_nv = loss_tv = loss_l1 = torch.tensor(
             0.0, device=self.device
         )
 
+        # small trick
         U_norm = U / (U.norm(dim=-1, keepdim=True) + self.eps)
 
         # Neg Entropy Loss
@@ -118,14 +174,15 @@ class CocktailPartyAttack(GradientReconstructor):
         if torch.isnan(X_hat).any():
             raise ValueError(f"S_hat has NaN")
 
-        if self.ne > 0:
-            # A high value of negentropy indicates a high degree of non-Gaussianity.
-            loss_ne = -(((1 / self.a) * torch.log(torch.cosh(self.a * X_hat) + self.eps).mean(dim=-1)) ** 2).mean()
+        # A high value of negentropy indicates a high degree of non-Gaussianity.
+        loss_ne = -(((1 / self.a) * torch.log(torch.cosh(self.a * X_hat) + self.eps).mean(dim=-1)) ** 2).mean()
 
         # Undo centering, whitening
         X_hat = X_hat + torch.matmul(torch.matmul(U_norm, w), grads_mu)
 
         # Decorrelation Loss (decorrelate i-th row with j-th row, s.t. j>i)
+        # Mutual Independence (MI): We assume that the source
+        # signals are independently chosen and thus their values are uncorrelated
         if self.decor > 0:
             # We assume that the source signals are independently chosen and thus their values are uncorrelated
             cos_matrix = torch.matmul(U_norm, U_norm.T).abs()
@@ -167,6 +224,7 @@ class CocktailPartyAttack(GradientReconstructor):
         Purpose: 1) Project the dataset onto the eigenvectors.
                     This rotates the dataset so that there is no correlation between the components.
                  2) Normalize the dataset to have a variance of 1 for all components.
+        Caution: Computed eigenvectors are complex numbers
 
         Due to the 'channel first' characteristics of cudnn,
         transpose operation should be applied to PCA processing
@@ -188,16 +246,26 @@ class CocktailPartyAttack(GradientReconstructor):
         return x_w, n_eig_vecs
 
 
-class DirectReconstructor:
+class FeatureInversionAttack:
+    """ Invert the embedding produced by a neural network to recover the input. """
 
-    def __init__(self, model, dummy, rec_epochs, lr, fi, tv, device):
+    def __init__(self, model, dummy, rec_epochs, rec_lr, fi, tv, device):
+        """
+
+        :param model: inferred model
+        :param dummy: TorchDummy object
+        :param rec_epochs: reconstruct epochs
+        :param rec_lr: reconstruct learning rate
+        :param fi: feature inversion weight
+        :param tv: total variation prior weight
+        :param device: cpu or cuda
+        """
         self.model = model
         self.dummy = dummy
         self.rec_epochs = rec_epochs
-        self.lr = lr
+        self.rec_lr = rec_lr
         self.fi = fi
         self.tv = tv
-        self.lr = lr
 
         self.device = device
 
@@ -206,14 +274,13 @@ class DirectReconstructor:
 
     def reconstruct(self, rec_z):
         dummy_data = self.dummy.generate_dummy_input(device=self.device)
-        optimizer = optim.Adam([dummy_data], lr=self.lr, weight_decay=0)
+        optimizer = optim.Adam([dummy_data], lr=self.rec_lr, weight_decay=0)
         cosine_similarity = nn.CosineSimilarity(dim=-1, eps=1e-10).to(self.device)
 
         # optimizer the fake data through reconstructed latent inputs
         pbar = tqdm(range(self.rec_epochs),
                     total=self.rec_epochs,
                     desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
-
         for _ in pbar:
             optimizer.zero_grad()
             loss = self._build_loss(cosine_similarity, rec_z, dummy_data)
