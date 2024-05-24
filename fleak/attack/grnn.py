@@ -13,7 +13,7 @@ import torch.nn as nn
 from fleak.model.gan import GRNNGenerator
 
 
-def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
+def grnn(model, gt_grads, dummy, rec_epochs=1000, rec_lr=0.0001, tv=1e-3, device="cpu"):
     """Official implementation of GRNN https://github.com/Rand2AI/GRNN
 
     Instead of directly recovering dummy data, GRNN optimizes the parameters of a Generator
@@ -25,7 +25,8 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
     :param gt_grads: gradients of the ground-truth data
     :param dummy: TorchDummy object
     :param rec_epochs: number of training epochs for the Generator
-    :param alpha: hyperparameter for TV loss
+    :param rec_lr: reconstruct learning rate
+    :param tv: hyperparameter for TV loss
     :param device: cpu or cuda
     :return: dummy data & dummy label
     """
@@ -35,14 +36,13 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
 
     generator = GRNNGenerator(dummy.n_classes, in_features=128, image_shape=dummy.image_shape).to(device)
     # update parameters of the generator other than dummy data
-    optimizer = torch.optim.RMSprop(generator.parameters(), lr=0.0001, momentum=0.99)
+    optimizer = torch.optim.RMSprop(generator.parameters(), lr=rec_lr, momentum=0.99)
     tv_loss = TVLoss()
     random_noise = torch.randn(dummy.batch_size, 128).to(device)
 
     iter_bar = tqdm(range(rec_epochs),
                     total=rec_epochs,
-                    desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}',
-                    ncols=180)
+                    desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
     for _ in iter_bar:
         optimizer.zero_grad()
 
@@ -58,15 +58,15 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, alpha=1e-3, device="cpu"):
         grad_diff_l2 = ((flatten_dummy_grads - flatten_gt_grads) ** 2).sum()
         grad_diff_wd = wasserstein_distance(flatten_dummy_grads, flatten_gt_grads)
         # total variation loss
-        # alpha = 1e-3 for LeNet, and alpha = 1e-6 for ResNet18
-        tv = alpha * tv_loss(dummy_data)
-        grad_diff = grad_diff_l2 + grad_diff_wd + tv
+        # tv = 1e-3 for LeNet, and tv = 1e-6 for ResNet18
+        loss_tv = tv * tv_loss(dummy_data)
+        grad_diff = grad_diff_l2 + grad_diff_wd + loss_tv
 
         grad_diff.backward()
         optimizer.step()
         iter_bar.set_postfix(loss_l2=np.round(grad_diff_l2.item(), 8),
                              loss_wd=np.round(grad_diff_wd.item(), 8),
-                             loss_tv=np.round(tv.item(), 8))
+                             loss_tv=np.round(loss_tv.item(), 8))
 
     dummy.append(dummy_data)
     rec_dummy_label = torch.argmax(dummy_label, dim=-1)

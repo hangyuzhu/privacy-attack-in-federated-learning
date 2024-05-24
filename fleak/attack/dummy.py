@@ -83,7 +83,7 @@ class TorchDummyImage(TorchDummy):
     ):
         """
 
-        Caution: methods like inverting linear layer does not care about the batch size !
+        Caution: methods like rtf and GGL do not care about the batch size !
 
         :param image_shape: 3D image shape
         :param batch_size: batch size

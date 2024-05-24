@@ -2,12 +2,14 @@ DATASETS = ['mnist', 'cifar10', 'cifar100', 'tiny_imagenet']
 
 MODELS = ['mlp', 'cnn', 'simple_cnn',
           'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
-          'fc2', 'vgg']
+          'fc2', 'vgg16']
 MODE = ['test', 'valid']
 STRATEGY = ['fedavg', 'fedper', 'fedcrowd', 'fedbcc', 'bcc']
 RESULTS = ['results_fedavg', 'results_fedcrowd', 'results_fedbcc', 'results_bcc']
 
 ATTACKS = ['dlg', 'idlg', 'ig_single', 'ig_multi', 'rtf', 'ggl', 'grnn', 'cpa']
+
+BASE_SAVE_PATH = "saved_results"
 
 
 def get_model_options(dataset):
@@ -22,6 +24,6 @@ def get_model_options(dataset):
         "resnet101": ResNet101,
         "resnet152": ResNet152,
         "fc2": FC2,
-        "vgg": TinyImageNetVGG if dataset == 'tiny_imagenet' else CifarVGG
+        "vgg16": TinyImageNetVGG if dataset == 'tiny_imagenet' else CifarVGG
     }
     return model

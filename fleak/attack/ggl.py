@@ -20,7 +20,7 @@ def ggl(model, generator, gt_grads, dummy, rec_epochs, device):
     Loss function is constructed by DLG loss + KLD loss
 
     :param model: inferred model
-    :param generator: GGL generator
+    :param generator: trained GGL generator
     :param gt_grads: gradients of the ground truth data
     :param dummy: TorchDummy object
     :param rec_epochs: number of reconstruction epochs
@@ -74,6 +74,7 @@ class CMAReconstructor:
             self.ng_optimizer.tell(z, loss)
             pbar.set_description("Loss {:.6}".format(loss))
 
+        # get the best point
         recommendation = self.ng_optimizer.provide_recommendation()
         z_res = torch.from_numpy(recommendation.value).unsqueeze(0).to(self.device)
 

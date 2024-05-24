@@ -6,12 +6,12 @@ from fleak.server import ServerAttacker
 from fleak.client import Client
 from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
-from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS
+from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS, STRATEGY
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
 from fleak.data.dataloader import generate_dataloaders
 from fleak.model import ImprintModel
 from fleak.model import GGLGenerator
-from fleak.utils.plot import plot_dummy_images
+from fleak.utils.save import save_fed_images, save_acc
 
 
 def main(args):
@@ -31,7 +31,8 @@ def main(args):
         n_parties=args.total_clients,
         valid_prop=args.valid_prop,
         test_prop=args.test_prop,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        verbose=False
     )
 
     # Assume the attacker holds the mean and std of the training data
@@ -53,6 +54,7 @@ def main(args):
     # often for robbing the fed
     if args.imprint:
         model = partial(ImprintModel, base_module=model, input_shape=dummy.input_shape)
+        print("\n###### Wrap the model by imprint module ######")
 
     # ======= Create Attacker ========
     if args.attack == "ggl":
@@ -70,14 +72,12 @@ def main(args):
                             generator=generator,
                             test_loader=test_loader,
                             dummy=dummy,
-                            local_epochs=args.num_epochs,
-                            local_lr=args.lr,
                             device=args.device)
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
                           client_model=model(n_classes),
-                          num_epochs=args.num_epochs,
+                          num_epochs=args.local_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,
                           momentum=args.client_momentum,
@@ -101,19 +101,21 @@ def main(args):
         if i > 0:
             eval_accuracy.append(eval_acc)
 
-        # attack
-        server.attack(method=args.attack)
+        # server side attack
+        server.attack(args)
 
         # federated aggregation
         server.federated_averaging()
         duration_time = time.time() - start_time
         print('One communication round training time: %.4fs' % duration_time)
 
-    # show reconstructions
-    plot_dummy_images(dummy, args)
     # final eval acc
     eval_acc = server.evaluate(set_to_use=args.set_to_use)
     eval_accuracy.append(eval_acc)
+
+    # save
+    save_fed_images(dummy, args, verbose=True)
+    save_acc(eval_accuracy, args)
 
 
 def online(clients):
@@ -127,10 +129,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__)
 
+    # training hyperparameters ----------------------------------------------------------------------------
+    parser.add_argument('--strategy', type=str, default='fedavg', choices=STRATEGY,
+                        help='strategy used in federated learning')
     parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
     parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
-    parser.add_argument('--num_epochs', default=2, type=int, metavar='N',
+    parser.add_argument('--local_epochs', default=2, type=int, metavar='N',
                         help='number of local client epochs')
     parser.add_argument('--batch_size', default=50, type=int, metavar='N',
                         help='batch size when training and testing.')
@@ -141,8 +146,8 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
-    parser.add_argument('--data_path', default='../federated_learning/data/',
-                        type=str, help='path of the dataset')
+    # dataset -----------------------------------------------------------------------------------------------
+    parser.add_argument('--data_path', default='../federated_learning/data/', type=str, help='path of the dataset')
     parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
     parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
@@ -155,21 +160,31 @@ if __name__ == '__main__':
     parser.add_argument('--num_classes_per_client', type=int, default=2, choices=[2, 5, 20, 50, 100],
                         help='number of data classes on one client')
 
+    # device & save ------------------------------------------------------------------------------------------
+    parser.add_argument('--device', default='cuda:0', help='device')
     parser.add_argument('--save_results', default=False, action='store_true', help='if saving the results')
 
-    parser.add_argument('--device', default='cuda:0', help='device')
-    parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
-
+    # attack -------------------------------------------------------------------------------------------------
     parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
     parser.add_argument('--imprint', default=False, action='store_true',
                         help='if wrapping the model with imprint block')
-    parser.add_argument('--rec_batch_size', default=1, type=int, metavar='N',
-                        help='reconstruction batch size.')
+    parser.add_argument('--rec_epochs', default=300, type=int, help="reconstruct epochs")
+    parser.add_argument('--rec_batch_size', default=1, type=int, metavar='N', help='reconstruction batch size.')
+    parser.add_argument('--rec_lr', default=1.0, type=float, help='reconstruct learning rate')
+
+    parser.add_argument('--tv', default=1e-6, type=float, help='hyperparameter for TV regularization')
+    # cpa
+    parser.add_argument("--decor", type=float, default=1, help="decorrelation weight (CPA)")
+    parser.add_argument("--T", type=float, default=5,
+                        help="Temperature for cosine similarity when computing decor loss in CPA")
+    parser.add_argument("--nv", type=float, default=0, help="negative value penalty")
+    parser.add_argument("--l1", type=float, default=0, help="L1 prior")
+    parser.add_argument("--fi", type=float, default=1, help="feature inversion weight")
 
     args = parser.parse_args()
-    print('\n============== Federated Learning Setting ==============')
+    print('\n============== Experimental Setting ==============')
     print(args)
-    print('============== Federated Learning Setting ==============\n')
+    print('============== Experimental Setting ==============\n')
 
     main(args)
 

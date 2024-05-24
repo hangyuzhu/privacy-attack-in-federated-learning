@@ -45,6 +45,8 @@ def ig_multi(model, gt_grads, dummy, rec_epochs=8000, rec_lr=0.1,
     """Reconstruct one or multiple images from weights after several SGD steps
 
     Dummy gradients are simulated by multiple steps of SGD
+    1) batch_size = 1 -> weight updates
+    2) batch_size > 1 -> multi updates
 
     :param model: inferred model
     :param gt_grads: gradients of the ground-truth data

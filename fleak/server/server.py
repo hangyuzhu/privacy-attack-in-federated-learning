@@ -129,8 +129,6 @@ class ServerAttacker(Server):
         generator=None,
         test_loader=None,
         dummy=None,
-        local_epochs=1,
-        local_lr=0.1,
         device=None
     ):
         super().__init__(
@@ -142,39 +140,94 @@ class ServerAttacker(Server):
         )
         if generator is not None:
             self.generator = generator.to(self.device)
-
         self.dummy = dummy
-        self.local_epochs = local_epochs
-        self.local_lr = local_lr
 
-    def attack(self, method):
+    def attack(self, args):
         """
         Randomly select a client to infer its private data
 
-        :param method: attack method
+        :param args: attack arguments
         :return: reconstructed data and labels
         """
         local_grads = self.extract_gradients(self.updates[0][-1])
         # replace the global model by client model
         self.global_model.load_state_dict(self.updates[0][-1])
 
-        if method == "dlg":
-            dlg(self.global_model, local_grads, self.dummy, 300, self.device)
-        elif method == "idlg":
-            idlg(self.global_model, local_grads, self.dummy, 300, 1.0, self.device)
-        elif method == "ig_single":
-            ig_single(self.global_model, local_grads, self.dummy, 4000, 0.1, 1e-6, self.device)
-        elif method == "ig_multi":
+        if args.attack == "dlg":
+            dlg(
+                model=self.global_model,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                rec_epochs=args.rec_epochs,
+                rec_lr=args.rec_lr,
+                device=self.device
+            )
+        elif args.attack == "idlg":
+            idlg(
+                model=self.global_model,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                rec_epochs=args.rec_epochs,
+                rec_lr=args.rec_lr,
+                device=self.device
+            )
+        elif args.attack == "ig_single":
+            ig_single(
+                model=self.global_model,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                rec_epochs=args.rec_epochs,
+                rec_lr=args.rec_lr,
+                tv=args.tv,
+                device=self.device
+            )
+        elif args.attack == "ig_multi":
             ig_multi(
-                self.global_model, local_grads, self.dummy,
-                8000, 0.1, self.local_epochs, self.local_lr, 1e-6, self.device)
-        elif method == "rtf":
-            invert_linear_layer(local_grads, self.dummy)
-        elif method == "ggl":
-            ggl(self.global_model, self.generator, local_grads, self.dummy, 25000, self.device)
-        elif method == "grnn":
-            grnn(self.global_model, local_grads, self.dummy, 1000, 1e-3, self.device)
-        elif method == "cpa":
-            cpa(self.global_model, local_grads, self.dummy, 25000, 0.001, 5.3, 7.7, 0.1, 0.13, 5, 1, self.device)
+                model=self.global_model,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                rec_epochs=args.rec_epochs,
+                rec_lr=args.rec_lr,
+                local_epochs=args.local_epochs,
+                local_lr=args.lr,
+                tv=args.tv,
+                device=self.device
+            )
+        elif args.attack == "rtf":
+            invert_linear_layer(gt_grads=local_grads, dummy=self.dummy)
+        elif args.attack == "ggl":
+            ggl(
+                model=self.global_model,
+                generator=self.generator,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                rec_epochs=args.rec_epochs,
+                device=self.device
+            )
+        elif args.attack == "grnn":
+            grnn(
+                model=self.global_model,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                rec_epochs=args.rec_epochs,
+                rec_lr=args.rec_lr,
+                tv=args.tv,
+                device=self.device
+            )
+        elif args.attack == "cpa":
+            cpa(
+                model=self.global_model,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                rec_epochs=args.rec_epochs,
+                rec_lr=args.rec_lr,
+                decor=args.decor,
+                T=args.T,
+                tv=args.tv,
+                nv=args.nv,
+                l1=args.l1,
+                fi=args.fi,
+                device=self.device
+            )
         else:
-            raise ValueError("Unexpected {} Attack Type.".format(method))
+            raise ValueError("Unexpected {} Attack Type.".format(args.attack))
