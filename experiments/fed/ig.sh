@@ -1,4 +1,4 @@
-DATAPATH="../federated_learning/data/"
+BASE_DATADIR="../federated_learning/data"
 
 cd ..
 cd ..
@@ -8,7 +8,7 @@ cd ..
 python server_attack.py \
     --attack ig_single \
     --model cnn \
-    --data_path $DATAPATH \
+    --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
     --p_type dirichlet \
     --beta 0.5 \
@@ -31,7 +31,7 @@ python server_attack.py \
 python server_attack.py \
     --attack ig_multi \
     --model cnn \
-    --data_path $DATAPATH \
+    --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
     --p_type dirichlet \
     --beta 0.5 \
@@ -54,7 +54,7 @@ python server_attack.py \
 python server_attack.py \
     --attack ig_multi \
     --model cnn \
-    --data_path $DATAPATH \
+    --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
     --p_type dirichlet \
     --beta 0.5 \

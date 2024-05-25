@@ -8,7 +8,7 @@ from fleak.attack.dummy import TorchDummyImage
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS, STRATEGY
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
-from fleak.data.dataloader import generate_dataloaders
+from fleak.data.dataloader import federated_dataloaders
 from fleak.model import ImprintModel
 from fleak.model import GGLGenerator
 from fleak.utils.save import save_fed_images, save_acc
@@ -22,10 +22,9 @@ def main(args):
                             p_type=args.p_type,
                             beta=args.beta,
                             n_classes=args.num_classes_per_client)
-    data_dir = args.data_path + args.dataset
-    train_loaders, valid_loaders, test_loaders, test_loader = generate_dataloaders(
+    train_loaders, valid_loaders, test_loaders, test_loader = federated_dataloaders(
         dataset=args.dataset,
-        data_dir=data_dir,
+        base_data_dir=args.base_data_dir,
         data_augment=args.data_augment,
         p_method=partition_method,
         n_parties=args.total_clients,
@@ -147,7 +146,8 @@ if __name__ == '__main__':
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
     # dataset -----------------------------------------------------------------------------------------------
-    parser.add_argument('--data_path', default='../federated_learning/data/', type=str, help='path of the dataset')
+    parser.add_argument('--base_data_dir', default='../federated_learning/data', type=str,
+                        help='base directory of the dataset')
     parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
     parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')

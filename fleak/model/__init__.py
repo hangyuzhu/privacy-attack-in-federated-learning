@@ -12,6 +12,7 @@ from .neural_network import TinyImageNetVGG
 from .neural_network import CifarVGG
 
 from .gan import GGLGenerator
+from .gan import GGLDiscriminator
 from .gan import MnistGenerator
 from .gan import MnistDiscriminator
 from .gan import CifarDiscriminator
@@ -35,6 +36,7 @@ __all__ = {
     "CifarVGG",
 
     "GGLGenerator",
+    "GGLDiscriminator",
     "MnistGenerator",
     "MnistDiscriminator",
     "CifarDiscriminator",

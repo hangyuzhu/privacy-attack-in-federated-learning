@@ -1,14 +1,12 @@
 import time
-import json
-import datetime
-import os
 
 from fleak.server import Server
 from fleak.client import Client
 from fleak.utils.constants import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
 from fleak.data.image_dataset import N_CLASSES
-from fleak.data.dataloader import generate_dataloaders
+from fleak.data.dataloader import federated_dataloaders
+from fleak.utils.save import save_acc
 
 
 def main(args):
@@ -19,10 +17,9 @@ def main(args):
                             p_type=args.p_type,
                             beta=args.beta,
                             n_classes=args.num_classes_per_client)
-    data_dir = args.data_path + args.dataset
-    train_loaders, valid_loaders, test_loaders, test_loader = generate_dataloaders(
+    train_loaders, valid_loaders, test_loaders, test_loader = federated_dataloaders(
         dataset=args.dataset,
-        data_dir=data_dir,
+        base_data_dir=args.base_data_dir,
         data_augment=args.data_augment,
         p_method=partition_method,
         n_parties=args.total_clients,
@@ -42,7 +39,7 @@ def main(args):
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
                           client_model=model(N_CLASSES[args.dataset]),
-                          num_epochs=args.num_epochs,
+                          num_epochs=args.local_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,
                           momentum=args.client_momentum,
@@ -75,24 +72,7 @@ def main(args):
     print('Overall elapsed time : ', duration)
 
     # ======= save results ========
-    if args.save_results:
-        save_file = "results_" + str(args.strategy)
-        if not os.path.exists(save_file):
-            os.makedirs(save_file)
-        file_name = args.model + '_' + args.dataset + '_'
-        if args.iid:
-            file_name += 'iid_'
-        else:
-            file_name += 'niid' + str(args.beta) + '_'
-        file_name += 'C' + str(clients_per_round) + '.' + str(args.total_clients) + '_'
-        if args.strategy == 'fedper':
-            file_name += 'share' + str(args.num_shared_layers) + '_'
-        file_name += 'ep' + str(args.num_epochs) + '_'
-        current_datetime = datetime.datetime.now()
-        file_name += args.set_to_use + '_' + current_datetime.strftime("%Y-%m-%d_%H-%M-%S") + '.txt'
-        record_file_name = os.path.join(save_file, file_name)
-        with open(record_file_name, 'w') as file:
-            json.dump(eval_accuracy, file)
+    save_acc(eval_accuracy, args)
 
 
 def online(clients):
@@ -112,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
     parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
-    parser.add_argument('--num_epochs', default=2, type=int, metavar='N',
+    parser.add_argument('--local_epochs', default=2, type=int, metavar='N',
                         help='number of local client epochs')
     parser.add_argument('--batch_size', default=50, type=int, metavar='N',
                         help='batch size when training and testing.')
@@ -124,10 +104,12 @@ if __name__ == '__main__':
 
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
+    parser.add_argument('--imprint', default=False, action='store_true',
+                        help='if wrapping the model with imprint block')
     parser.add_argument('--set_to_use', default='test', type=str, choices=MODE, help='Training model')
 
-    parser.add_argument('--data_path', default='C:/Users/merlin/data/',
-                        type=str, help='path of the dataset')
+    parser.add_argument('--base_data_dir', default='data',
+                        type=str, help='base data directory of the dataset')
     parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
     parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
@@ -141,9 +123,7 @@ if __name__ == '__main__':
                         help='number of data classes on one client')
 
     parser.add_argument('--save_results', default=False, action='store_true', help='if saving the results')
-
     parser.add_argument('--device', default='cuda:0', help='device')
-    parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
 
     args = parser.parse_args()
     print('\n============== Federated Learning Setting ==============')

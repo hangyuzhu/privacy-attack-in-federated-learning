@@ -1,4 +1,4 @@
-DATAPATH="../federated_learning/data/"
+BASE_DATADIR="../federated_learning/data"
 
 cd ..
 cd ..
@@ -9,7 +9,7 @@ python server_attack.py \
     --attack rtf \
     --model resnet18 \
     --imprint \
-    --data_path $DATAPATH \
+    --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
     --p_type dirichlet \
     --beta 0.5 \
@@ -29,7 +29,7 @@ python server_attack.py \
     --attack rtf \
     --model resnet18 \
     --imprint \
-    --data_path $DATAPATH \
+    --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
     --iid \
     --total_clients 10 \

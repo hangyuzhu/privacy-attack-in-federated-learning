@@ -129,7 +129,7 @@ def split_train_valid_test(user_data_indexes, valid_ratio: float, test_ratio: fl
     return train_index, valid_index, test_index
 
 
-def partition_dataset(dataset: str, data_dir: str, data_augment: bool, p_method: dict, n_parties,
+def partition_dataset(dataset: str, base_data_dir: str, data_augment: bool, p_method: dict, n_parties,
                       valid_prop=0, test_prop=0.2, verbose=True):
     """
     Training part of the original dataset is allocated to multiple parties, each party manually
@@ -137,7 +137,7 @@ def partition_dataset(dataset: str, data_dir: str, data_augment: bool, p_method:
     Testing part of the original dataset is not partitioned
 
     :param dataset: name of the dataset
-    :param data_dir: path of dataset
+    :param base_data_dir: base directory of the dataset
     :param data_augment: if using data augmentation
     :param p_method: partition method
     :param n_parties: number of users
@@ -147,6 +147,8 @@ def partition_dataset(dataset: str, data_dir: str, data_augment: bool, p_method:
     :return: train_dataset, test_dataset, train_user_idx, valid_user_idx, test_user_idx
     """
     assert test_prop > 0
+    data_dir = f"{base_data_dir}/{dataset}"
+
     if dataset == 'mnist':
         train_dataset, test_dataset = load_mnist_dataset(data_dir)
     elif dataset == 'cifar10':
