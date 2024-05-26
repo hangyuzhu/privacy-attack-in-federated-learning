@@ -1,4 +1,30 @@
 from fleak.dlg_attack import dlg_attack
+from fleak.utils.constants import DATASETS, MODELS, ATTACKS
 
 
-dlg_attack()
+def main(args):
+    if args.attack == "dlg" or args.attack == "idlg":
+        dlg_attack(args)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description=__doc__)
+    parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
+    # model
+    parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
+    parser.add_argument('--imprint', default=False, action='store_true',
+                        help='if wrapping the model with imprint block')
+    # data
+    parser.add_argument('--base_data_dir', default='../federated_learning/data', type=str,
+                        help='base directory of the dataset')
+    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
+    # device
+    parser.add_argument('--device', default='cuda', help='device')
+    parser.add_argument('--save_results', default=False, action='store_true', help='if saving the results')
+    args = parser.parse_args()
+
+    main(args)

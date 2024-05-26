@@ -1,8 +1,10 @@
 """ neural network models constructed by torch.nn.Module
 
-Caution: If the model is required to be wrapped by MetaModel, all the modules should be
-         built 'sequentially'. And for those modules not containing trainable parameters,
-         try to use nn.Module other than nn.functional method !
+Caution: 1) If the model is required to be wrapped by MetaModel, all the modules should be
+            built 'sequentially'. And for those modules not containing trainable parameters,
+            try to use nn.Module other than nn.functional method !
+         2) Dropout layer is sensitive to the outcome of generated dummy images, remove it or
+            set it to zero would get much better and more valid results
 
 """
 
@@ -119,6 +121,90 @@ class MnistConvNet(nn.Module):
         return self.fc2(x)
 
 
+class MnistConvNetNoDropout(nn.Module):
+    """ Removing dropout layer would result in better quality of privacy attack """
+
+    def __init__(self, num_classes):
+        super(MnistConvNetNoDropout, self).__init__()
+        # conv1
+        self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.relu1 = nn.ReLU()
+        # conv2
+        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.relu2 = nn.ReLU()
+        self.pool2 = nn.MaxPool2d(2)
+        # linear
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(9216, 128)
+        self.relu3 = nn.ReLU()
+        self.fc2 = nn.Linear(128, num_classes)
+
+    def forward(self, x):
+        # conv1
+        x = self.conv1(x)
+        x = self.relu1(x)
+        # conv2
+        x = self.conv2(x)
+        x = self.relu2(x)
+        x = self.pool2(x)
+        # linear
+        x = self.flatten(x)
+        x = self.fc1(x)
+        x = self.relu3(x)
+        return self.fc2(x)
+
+
+class CifarConvNet(nn.Module):
+    """ Replacing .view() by nn.Flatten module for MetaModel """
+
+    def __init__(self, num_classes):
+        super(CifarConvNet, self).__init__()
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+        self.relu1 = nn.ReLU()
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.relu2 = nn.ReLU()
+        self.pool = nn.MaxPool2d(2, 2)
+        self.drop_out1 = nn.Dropout(0.25)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64*16*16, 512)
+        self.relu3 = nn.ReLU()
+        self.drop_out2 = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(512, num_classes)
+
+    def forward(self, x):
+        x = self.relu1(self.conv1(x))
+        x = self.pool(self.relu2(self.conv2(x)))
+        x = self.drop_out1(x)
+        x = self.flatten(x)
+        x = self.drop_out2(self.relu3(self.fc1(x)))
+        x = self.fc2(x)
+        return x
+
+
+class CifarConvNetNoDropout(nn.Module):
+    """ Removing dropout layer would result in better quality of privacy attack """
+
+    def __init__(self, num_classes):
+        super(CifarConvNetNoDropout, self).__init__()
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+        self.relu1 = nn.ReLU()
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.relu2 = nn.ReLU()
+        self.pool = nn.MaxPool2d(2, 2)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64*16*16, 512)
+        self.relu3 = nn.ReLU()
+        self.fc2 = nn.Linear(512, num_classes)
+
+    def forward(self, x):
+        x = self.relu1(self.conv1(x))
+        x = self.pool(self.relu2(self.conv2(x)))
+        x = self.flatten(x)
+        x = self.relu3(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+
 class MnistMLP(nn.Module):
 
     def __init__(self, num_classes):
@@ -186,33 +272,6 @@ class FC2(nn.Module):
         x = torch.flatten(x, start_dim=1, end_dim=-1)
         x = self.net(x)
         return self.final(x)
-
-
-class CifarConvNet(nn.Module):
-    """ Replacing .view() by nn.Flatten module for MetaModel """
-
-    def __init__(self, num_classes):
-        super(CifarConvNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.relu2 = nn.ReLU()
-        self.pool = nn.MaxPool2d(2, 2)
-        self.drop_out1 = nn.Dropout(0.25)
-        self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(64*16*16, 512)
-        self.relu3 = nn.ReLU()
-        self.drop_out2 = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(512, num_classes)
-
-    def forward(self, x):
-        x = self.relu1(self.conv1(x))
-        x = self.pool(self.relu2(self.conv2(x)))
-        x = self.drop_out1(x)
-        x = self.flatten(x)
-        x = self.drop_out2(self.relu3(self.fc1(x)))
-        x = self.fc2(x)
-        return x
 
 
 cfgs = [64, 64, "M", 128, 128, "M", 256, 256, 256, "M", 512, 512, 512, "M", 512, 512, 512, "M"]

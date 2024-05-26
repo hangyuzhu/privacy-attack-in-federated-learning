@@ -87,9 +87,8 @@ def save_images(images: list, args):
         else:
             imp = ""
 
-        filename = f"{BASE_SAVE_PATH}/{args.attack}_{args.dataset}_{imp}{args.model}_" \
-                   f"{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
-                   f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
+        filename = f"{BASE_SAVE_PATH}/{args.attack}_{args.num_exp}n_{args.dataset}_{imp}{args.model}_" \
+                   f"{args.rec_batch_size}rb.png"
         plt.savefig(filename, bbox_inches='tight')
 
     plt.show()

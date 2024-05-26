@@ -1,7 +1,7 @@
 from ..model import MnistMLP
 from ..model import CifarMLP
-from ..model import MnistConvNet
-from ..model import CifarConvNet
+from ..model import MnistConvNetNoDropout
+from ..model import CifarConvNetNoDropout
 from ..model import ResNet18
 from ..model import ResNet34
 from ..model import FC2
@@ -17,7 +17,8 @@ from ..data.image_dataset import load_tiny_imagenet_dataset
 def get_model_options(dataset):
     model = {
         "mlp": MnistMLP if dataset == 'mnist' else CifarMLP,
-        "cnn": MnistConvNet if dataset == 'mnist' else CifarConvNet,
+        # remove dropout layer
+        "cnn": MnistConvNetNoDropout if dataset == 'mnist' else CifarConvNetNoDropout,
         "resnet18": ResNet18,
         "resnet34": ResNet34,
         "fc2": FC2,

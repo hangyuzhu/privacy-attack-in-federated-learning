@@ -1,7 +1,9 @@
 from .neural_network import MnistMLP
 from .neural_network import CifarMLP
 from .neural_network import MnistConvNet
+from .neural_network import MnistConvNetNoDropout
 from .neural_network import CifarConvNet
+from .neural_network import CifarConvNetNoDropout
 from .neural_network import ResNet18
 from .neural_network import ResNet34
 from .neural_network import ResNet50
@@ -25,7 +27,9 @@ __all__ = {
     "MnistMLP",
     "CifarMLP",
     "MnistConvNet",
+    "MnistConvNetNoDropout",
     "CifarConvNet",
+    "CifarConvNetNoDropout",
     "ResNet18",
     "ResNet34",
     "ResNet50",

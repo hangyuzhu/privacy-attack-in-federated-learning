@@ -1,3 +1,9 @@
+"""
+
+DLG based approaches are very sensitive to dropout, BN layers and so on !
+
+"""
+
 import time
 from tqdm import tqdm
 import torch
@@ -23,7 +29,8 @@ def dlg(model, gt_grads, dummy, rec_epochs=300, rec_lr=1.0, device="cpu"):
     :param device: cpu or cuda
     :return: dummy data, dummy label (int)
     """
-    model.eval()
+    # be careful about the influence on model.train() & model.eval()
+    # especially dropout layer and bn layer are included in model
 
     dummy_data = dummy.generate_dummy_input(device)
     dummy_label = dummy.generate_dummy_label(device)
@@ -76,7 +83,8 @@ def idlg(model, gt_grads, dummy, rec_epochs=300, rec_lr=0.075, device="cpu"):
     :param device: cpu or cuda
     :return: dummy data, label prediction
     """
-    model.eval()
+    # be careful about the influence on model.train() & model.eval()
+    # especially dropout layer and bn layer are included in model
 
     dummy_data = dummy.generate_dummy_input(device)
     # extract ground-truth labels proposed by iDLG
@@ -85,7 +93,10 @@ def idlg(model, gt_grads, dummy, rec_epochs=300, rec_lr=0.075, device="cpu"):
     optimizer = torch.optim.LBFGS([dummy_data], lr=rec_lr)
     criterion = nn.CrossEntropyLoss().to(device)
 
-    for iters in range(rec_epochs):
+    pbar = tqdm(range(rec_epochs),
+                total=rec_epochs,
+                desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
+    for _ in pbar:
         def closure():
             optimizer.zero_grad()
             model.zero_grad()
@@ -101,7 +112,8 @@ def idlg(model, gt_grads, dummy, rec_epochs=300, rec_lr=0.075, device="cpu"):
 
             return grad_diff
 
-        optimizer.step(closure)
+        loss = optimizer.step(closure)
+        pbar.set_description("Loss {:.6}".format(loss))
 
     # save the dummy data
     dummy.append(dummy_data)
