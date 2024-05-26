@@ -11,7 +11,7 @@ NUM_COLS = 10
 MAX_IMAGES = 100
 
 
-def save_fed_images(dummy: TorchDummy, args, verbose=True):
+def save_fed_images(dummy: TorchDummy, args):
     max_images = min(len(dummy.history), MAX_IMAGES)
     num_rows = math.ceil(max_images / NUM_COLS)
 
@@ -59,8 +59,40 @@ def save_fed_images(dummy: TorchDummy, args, verbose=True):
                            f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
         plt.savefig(filename, bbox_inches='tight')
 
-    if verbose:
-        plt.show()
+    # show images
+    plt.show()
+
+
+def save_images(images: list, args):
+    max_images = min(len(images), MAX_IMAGES)
+    num_rows = math.ceil(max_images / NUM_COLS)
+
+    if max_images == 1:
+        plt.imshow(images[0])
+        plt.axis('off')
+    else:
+        plt.figure(figsize=(NUM_COLS * 2, num_rows * 2))
+        for i in range(max_images):
+            plt.subplot(num_rows, NUM_COLS, i + 1)
+            plt.imshow(images[i])
+            plt.axis('off')
+
+    if args.save_results:
+        if not os.path.exists(BASE_SAVE_PATH):
+            os.makedirs(BASE_SAVE_PATH)
+
+        # deal with imprint module
+        if args.imprint:
+            imp = "imp"
+        else:
+            imp = ""
+
+        filename = f"{BASE_SAVE_PATH}/{args.attack}_{args.dataset}_{imp}{args.model}_" \
+                   f"{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
+                   f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
+        plt.savefig(filename, bbox_inches='tight')
+
+    plt.show()
 
 
 def save_acc(eval_acc: list, args):

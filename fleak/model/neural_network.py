@@ -52,6 +52,37 @@ class MnistLeNet5(nn.Module):
         return x
 
 
+class CifarLeNet(nn.Module):
+
+    def __init__(self, num_classes):
+        super(CifarLeNet, self).__init__()
+        # conv1
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.relu1 = nn.ReLU()
+        self.pool1 = nn.MaxPool2d(2)
+        # conv2
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.relu2 = nn.ReLU()
+        self.pool2 = nn.MaxPool2d(2)
+        # linear
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(16*5*5, 120)
+        self.relu3 = nn.ReLU()
+        self.fc2 = nn.Linear(120, 84)
+        self.relu4 = nn.ReLU()
+        self.fc3 = nn.Linear(84, num_classes)
+
+    def forward(self, x):
+        out = self.pool1(self.relu1(self.conv1(x)))
+        out = self.pool2(self.relu2(self.conv2(out)))
+
+        out = self.flatten(out)
+        out = self.relu3(self.fc1(out))
+        out = self.relu4(self.fc2(out))
+        out = self.fc3(out)
+        return out
+
+
 class MnistConvNet(nn.Module):
 
     def __init__(self, num_classes):
@@ -62,7 +93,7 @@ class MnistConvNet(nn.Module):
         # conv2
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
         self.relu2 = nn.ReLU()
-        self.max_pool2d = nn.MaxPool2d(2)
+        self.pool2 = nn.MaxPool2d(2)
         self.dropout1 = nn.Dropout(0.25)
         # linear
         self.flatten = nn.Flatten()
@@ -78,10 +109,10 @@ class MnistConvNet(nn.Module):
         # conv2
         x = self.conv2(x)
         x = self.relu2(x)
-        x = self.max_pool2d(x, 2)
+        x = self.pool2(x)
         x = self.dropout1(x)
         # linear
-        x = self.flatten(x, 1)
+        x = self.flatten(x)
         x = self.fc1(x)
         x = self.relu3(x)
         x = self.dropout2(x)

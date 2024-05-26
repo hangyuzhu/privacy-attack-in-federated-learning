@@ -159,18 +159,31 @@ Caution: IMAGE_MEAN_GAN & IMAGE_STD_GAN are selected here for the purpose of tra
 """
 
 
-def load_mnist_dataset(data_dir, dm=None, ds=None):
+def load_mnist_dataset(data_dir, dm=None, ds=None, data_augment=False):
     if dm is None:
         dm = IMAGE_MEAN_GAN["mnist"]
     if ds is None:
         ds = IMAGE_STD_GAN["mnist"]
-    # ToTensor normalize images to 0 ~ 1
-    transform = transforms.Compose([
+    if data_augment:
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(28, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(dm, ds),
+        ])
+    else:
+        # ToTensor normalize images to 0 ~ 1
+        transform_train = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(dm, ds)
+        ])
+
+    transform_eval = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(dm, ds)
+        transforms.Normalize(dm, ds),
     ])
-    train_dataset = datasets.MNIST(data_dir, train=True, download=True, transform=transform)
-    test_dataset = datasets.MNIST(data_dir, train=False, transform=transform)
+    train_dataset = datasets.MNIST(data_dir, train=True, download=True, transform=transform_train)
+    test_dataset = datasets.MNIST(data_dir, train=False, transform=transform_eval)
     return train_dataset, test_dataset
 
 

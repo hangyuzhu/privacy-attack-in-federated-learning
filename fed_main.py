@@ -2,7 +2,7 @@ import time
 
 from fleak.server import Server
 from fleak.client import Client
-from fleak.utils.constants import get_model_options
+from fleak.utils.options import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
 from fleak.data.image_dataset import N_CLASSES
 from fleak.data.dataloader import federated_dataloaders

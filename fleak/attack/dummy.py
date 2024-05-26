@@ -62,12 +62,12 @@ class TorchDummy:
     def generate_dummy_input(self, device=None):
         if device is None:
             device = self.device
-        return torch.randn(self.input_shape).to(device).requires_grad_(True)
+        return torch.randn(self.input_shape, device=device, requires_grad=True)
 
     def generate_dummy_label(self, device=None):
         if device is None:
             device = self.device
-        return torch.randn(self.label_shape).to(device).requires_grad_(True)
+        return torch.randn(self.label_shape, device=device, requires_grad=True)
 
 
 class TorchDummyImage(TorchDummy):
@@ -119,6 +119,10 @@ class TorchDummyImage(TorchDummy):
     @property
     def image_shape(self):
         return self._image_shape
+
+    @property
+    def invert_transform(self):
+        return self._it
 
     def append(self, _dummy, method="ds"):
         if method == "ds":

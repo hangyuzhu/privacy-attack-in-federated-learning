@@ -150,13 +150,13 @@ def partition_dataset(dataset: str, base_data_dir: str, data_augment: bool, p_me
     data_dir = f"{base_data_dir}/{dataset}"
 
     if dataset == 'mnist':
-        train_dataset, test_dataset = load_mnist_dataset(data_dir)
+        train_dataset, test_dataset = load_mnist_dataset(data_dir, data_augment=data_augment)
     elif dataset == 'cifar10':
         train_dataset, test_dataset = load_cifar10_dataset(data_dir, data_augment=data_augment)
     elif dataset == 'cifar100':
         train_dataset, test_dataset = load_cifar100_dataset(data_dir, data_augment=data_augment)
     elif dataset == 'tiny_imagenet':
-        train_dataset, test_dataset = load_tiny_imagenet_dataset(data_dir)
+        train_dataset, test_dataset = load_tiny_imagenet_dataset(data_dir, data_augment=data_augment)
     else:
         raise TypeError('{} is not an expected dataset !'.format(dataset))
 

@@ -1,11 +1,11 @@
-import os.path
+import os
 import time
 from functools import partial
 
 from fleak.server import ServerAttacker
 from fleak.client import Client
 from fleak.attack.dummy import TorchDummyImage
-from fleak.utils.constants import get_model_options
+from fleak.utils.options import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, ATTACKS, STRATEGY
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
 from fleak.data.dataloader import federated_dataloaders
@@ -44,7 +44,6 @@ def main(args):
         ds=IMAGE_STD_GAN[args.dataset],
         device=args.device,
     )
-    n_classes = dummy.n_classes
 
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
@@ -67,7 +66,7 @@ def main(args):
             print("\n###### Untrained GGL generator is employed ######")
     else:
         generator = None
-    server = ServerAttacker(global_model=model(n_classes),
+    server = ServerAttacker(global_model=model(N_CLASSES[args.dataset]),
                             generator=generator,
                             test_loader=test_loader,
                             dummy=dummy,
@@ -75,7 +74,7 @@ def main(args):
 
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
-                          client_model=model(n_classes),
+                          client_model=model(N_CLASSES[args.dataset]),
                           num_epochs=args.local_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,
@@ -113,7 +112,7 @@ def main(args):
     eval_accuracy.append(eval_acc)
 
     # save
-    save_fed_images(dummy, args, verbose=True)
+    save_fed_images(dummy, args)
     save_acc(eval_accuracy, args)
 
 
@@ -182,9 +181,9 @@ if __name__ == '__main__':
     parser.add_argument("--fi", type=float, default=1, help="feature inversion weight")
 
     args = parser.parse_args()
-    print('\n============== Experimental Setting ==============')
+    print('\n============== Experimental Settings ==============')
     print(args)
-    print('============== Experimental Setting ==============\n')
+    print('============== Experimental Settings ==============\n')
 
     main(args)
 

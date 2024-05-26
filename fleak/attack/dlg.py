@@ -1,3 +1,5 @@
+import time
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,7 +30,10 @@ def dlg(model, gt_grads, dummy, rec_epochs=300, rec_lr=1.0, device="cpu"):
     optimizer = torch.optim.LBFGS([dummy_data, dummy_label], lr=rec_lr)  # default lr=1.0
     criterion = dummy_criterion
 
-    for iters in range(rec_epochs):
+    pbar = tqdm(range(rec_epochs),
+                total=rec_epochs,
+                desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
+    for _ in pbar:
         def closure():
             optimizer.zero_grad()
             model.zero_grad()  # not necessary
@@ -44,7 +49,8 @@ def dlg(model, gt_grads, dummy, rec_epochs=300, rec_lr=1.0, device="cpu"):
 
             return grad_diff
 
-        optimizer.step(closure)
+        loss = optimizer.step(closure)
+        pbar.set_description("Loss {:.6}".format(loss))
 
     # save the dummy data
     dummy.append(dummy_data)
