@@ -1,10 +1,13 @@
 from fleak.dlg_attack import dlg_attack
+from fleak.ig_attack import ig_attack
 from fleak.utils.constants import DATASETS, MODELS, ATTACKS
 
 
 def main(args):
     if args.attack == "dlg" or args.attack == "idlg":
         dlg_attack(args)
+    elif args.attack == "ig_single" or args.attack == "ig_weight" or args.attack == "ig_multi":
+        ig_attack(args)
 
 
 if __name__ == "__main__":

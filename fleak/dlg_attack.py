@@ -13,6 +13,7 @@ from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMA
 
 def dlg_attack(args):
     assert args.attack in ["dlg", "idlg"]
+    print(f"\n====== {args.attack} attack ======")
 
     # attack hyperparameters
     args.num_exp = 10

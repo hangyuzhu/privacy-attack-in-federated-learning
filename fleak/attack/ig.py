@@ -1,10 +1,13 @@
 """ Inverting Gradients - How easy is it to break privacy in federated learning?
 
 https://proceedings.neurips.cc/paper/2020/file/c4ede56bbd98819ae6112b20ac6bf145-Paper.pdf
+Caution: model.train() & model.eval() issue
 
  """
 
 import copy
+import time
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -118,17 +121,19 @@ class GradientReconstructor:
             gamma=0.1
         )  # 3/8 5/8 7/8
 
-        for i in range(self.epochs):
+        pbar = tqdm(range(self.epochs),
+                    total=self.epochs,
+                    desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
+        for _ in pbar:
             closure = self._gradient_closure(optimizer, criterion, gt_grads, dummy_data, dummy_label)
             rec_loss = optimizer.step(closure)
+            pbar.set_description("Rec. Loss {:.6}".format(rec_loss))
             scheduler.step()
 
             with torch.no_grad():
                 # small trick 2: project into image space
                 dummy_data.data = torch.max(
                     torch.min(dummy_data, (1 - self.dummy.t_dm) / self.dummy.t_ds), -self.dummy.t_dm / self.dummy.t_ds)
-                if i + 1 == self.epochs:
-                    print(f'Epoch: {i + 1}. Rec. loss: {rec_loss.item():2.4f}.')
 
         if self.convert_label:
             return dummy_data, torch.argmax(dummy_label, dim=-1)
