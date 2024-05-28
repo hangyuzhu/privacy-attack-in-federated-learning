@@ -27,6 +27,9 @@ def ggl(model, generator, gt_grads, dummy, rec_epochs, device):
     :param device: cpu or cuda
     :return: dummy data & dummy label
     """
+    # be careful about the influence on model.train() & model.eval()
+    # especially dropout layer and bn layer are included in model
+    # we follow the original implementation to set eval() here
     model.eval()
     generator.eval()
 

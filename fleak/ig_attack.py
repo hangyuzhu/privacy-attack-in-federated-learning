@@ -39,7 +39,7 @@ def ig_single_attack(args):
     dataset_loader = get_dataset_options(args.dataset)
     data_dir = f"{args.base_data_dir}/{args.dataset}"
 
-    train_dataset, test_dataset = dataset_loader(data_dir, data_augment=args.data_augment)
+    train_dataset, test_dataset = dataset_loader(data_dir, args.normalize, data_augment=args.data_augment)
     test_dl = DataLoader(test_dataset, batch_size=args.rec_batch_size, shuffle=True)
 
     # ======= Dummy =======
@@ -47,6 +47,7 @@ def ig_single_attack(args):
         image_shape=IMAGE_SHAPE[args.dataset],
         batch_size=args.rec_batch_size,
         n_classes=N_CLASSES[args.dataset],
+        normalize=args.normalize,
         dm=IMAGE_MEAN_GAN[args.dataset],
         ds=IMAGE_STD_GAN[args.dataset],
         device=args.device,
@@ -104,7 +105,7 @@ def ig_weight_attack(args):
     dataset_loader = get_dataset_options(args.dataset)
     data_dir = f"{args.base_data_dir}/{args.dataset}"
 
-    train_dataset, test_dataset = dataset_loader(data_dir, data_augment=args.data_augment)
+    train_dataset, test_dataset = dataset_loader(data_dir, args.normalize, data_augment=args.data_augment)
     test_dl = DataLoader(test_dataset, batch_size=args.rec_batch_size, shuffle=True)
 
     # ======= Dummy =======
@@ -112,6 +113,7 @@ def ig_weight_attack(args):
         image_shape=IMAGE_SHAPE[args.dataset],
         batch_size=args.rec_batch_size,
         n_classes=N_CLASSES[args.dataset],
+        normalize=args.normalize,
         dm=IMAGE_MEAN_GAN[args.dataset],
         ds=IMAGE_STD_GAN[args.dataset],
         device=args.device,
@@ -166,7 +168,7 @@ def ig_multi_attack(args):
     dataset_loader = get_dataset_options(args.dataset)
     data_dir = f"{args.base_data_dir}/{args.dataset}"
 
-    train_dataset, test_dataset = dataset_loader(data_dir, data_augment=args.data_augment)
+    train_dataset, test_dataset = dataset_loader(data_dir, args.normalize, data_augment=args.data_augment)
     test_dl = DataLoader(test_dataset, batch_size=args.rec_batch_size, shuffle=True)
 
     # ======= Dummy =======
@@ -174,6 +176,7 @@ def ig_multi_attack(args):
         image_shape=IMAGE_SHAPE[args.dataset],
         batch_size=args.rec_batch_size,
         n_classes=N_CLASSES[args.dataset],
+        normalize=args.normalize,
         dm=IMAGE_MEAN_GAN[args.dataset],
         ds=IMAGE_STD_GAN[args.dataset],
         device=args.device,

@@ -295,10 +295,13 @@ class FeatureInversionAttack:
         loss_fi = loss_tv = torch.tensor(0.0, device=self.device)
 
         # Box Image (small trick)
-        dummy_data.data = torch.max(
-            torch.min(dummy_data, (1 - self.dummy.t_dm) / self.dummy.t_ds),
-            -self.dummy.t_dm / self.dummy.t_ds
-        )
+        if self.dummy.normalize:
+            dummy_data.data = torch.max(
+                torch.min(dummy_data, (1 - self.dummy.t_dm) / self.dummy.t_ds),
+                -self.dummy.t_dm / self.dummy.t_ds
+            )
+        else:
+            dummy_data.data = torch.clamp(dummy_data, 0, 1)
 
         _, z_hat = self.model(dummy_data, return_z=True)
         if self.fi > 0:
@@ -333,9 +336,10 @@ def normalize(inp, dummy, method=None):
         )
         inp = inp.view(orig_shape)
     elif method == "ds":
-        mean = dummy.t_dm
-        std = dummy.t_ds
-        inp = torch.clamp((inp * std) + mean, 0, 1)
+        if dummy.normalize:
+            inp = torch.clamp((inp * dummy.t_ds) + dummy.t_dm, 0, 1)
+        else:
+            inp = torch.clamp(inp, 0, 1)
     else:
         raise ValueError(f"Unknown method {method}")
     return inp

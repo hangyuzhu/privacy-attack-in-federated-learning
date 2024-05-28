@@ -1,5 +1,6 @@
 import math
 from typing import Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -77,9 +78,10 @@ class TorchDummyImage(TorchDummy):
         image_shape: list,
         batch_size: int,
         n_classes: int,
-        dm: Union[list, tuple],
-        ds: Union[list, tuple],
-        device: str
+        normalize: bool,
+        dm: Optional[Union[list, tuple]] = None,
+        ds: Optional[Union[list, tuple]] = None,
+        device: str = "cpu"
     ):
         """
 
@@ -107,14 +109,18 @@ class TorchDummyImage(TorchDummy):
                 ds=ds,
                 device=device,
         )
-        # inverse transform operator
-        self._it = transforms.Compose([
-            UnNormalize(dm, ds),
-            transforms.ToPILImage()
-        ])
+        self.normalize = normalize
 
-        self.t_dm = torch.as_tensor(self.dm, device=device)[:, None, None]
-        self.t_ds = torch.as_tensor(self.ds, device=device)[:, None, None]
+        # inverse transform operator
+        it_list = []
+        if self.normalize:
+            assert (dm is not None and ds is not None)
+            it_list += [UnNormalize(dm, ds)]
+            # set the mean and std
+            self.t_dm = torch.as_tensor(self.dm, device=device)[:, None, None]
+            self.t_ds = torch.as_tensor(self.ds, device=device)[:, None, None]
+        it_list += [transforms.ToPILImage()]
+        self._it = transforms.Compose(it_list)
 
     @property
     def image_shape(self):

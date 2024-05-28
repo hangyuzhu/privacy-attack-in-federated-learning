@@ -10,6 +10,7 @@ python server_attack.py \
     --model fc2 \
     --base_data_dir $BASE_DATADIR \
     --dataset tiny_imagenet \
+    --normalize \
     --p_type dirichlet \
     --beta 0.5 \
     --total_clients 10 \
@@ -38,6 +39,7 @@ python server_attack.py \
     --model vgg16 \
     --base_data_dir $BASE_DATADIR \
     --dataset tiny_imagenet \
+    --normalize \
     --p_type dirichlet \
     --beta 0.5 \
     --total_clients 10 \

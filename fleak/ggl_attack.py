@@ -1,9 +1,10 @@
+import os
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from fleak.attack import dlg
-from fleak.attack import idlg
+from fleak.attack import ggl
+from fleak.model import GGLGenerator
 from fleak.utils.options import get_dataset_options
 from fleak.utils.options import get_model_options
 from fleak.utils.save import save_images
@@ -11,15 +12,15 @@ from fleak.attack.dummy import TorchDummyImage
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
 
 
-def dlg_attack(args):
-    assert args.attack in ["dlg", "idlg"]
+def ggl_attack(args):
+    assert args.attack == "ggl"
     print(f"\n====== {args.attack} attack ======")
 
     # attack hyperparameters
     args.num_exp = 10
-    args.rec_epochs = 300
+    args.rec_epochs = 25000
     args.rec_batch_size = 1
-    args.rec_lr = 1.0
+    pretrained = True
     print(f"\n====== Reconstruct {args.rec_batch_size} dummy data ======")
 
     # ======= Prepare Dataset ========
@@ -44,6 +45,16 @@ def dlg_attack(args):
     model_class = get_model_options(args.dataset)[args.model]
     # be careful about model.train() & model.eval() issue
     model = model_class(N_CLASSES[args.dataset]).to(args.device)
+    model.eval()
+
+    # ======= Create Generator ========
+    generator = GGLGenerator().to(args.device)
+    if pretrained:
+        model_file = os.path.join("saved_models", "ggl_" + args.dataset + ".pth")
+        # if load fails, run train_ggl_cifar10.py
+        generator.load_state_dict(torch.load(model_file))
+        print("\n###### Pretrained GGL generator has been loaded ######")
+    generator.eval()
 
     images = []
     for i in range(args.num_exp):
@@ -65,10 +76,7 @@ def dlg_attack(args):
         gt_grads = [g.detach() for g in gt_grads]
 
         # ======= Private Attack =======
-        if args.attack == "dlg":
-            dlg(model, gt_grads, dummy, args.rec_epochs, args.rec_lr, device=args.device)
-        else:
-            idlg(model, gt_grads, dummy, args.rec_epochs, args.rec_lr, device=args.device)
+        ggl(model, generator, gt_grads, dummy, args.rec_epochs, args.device)
 
     # save
     images += dummy.history

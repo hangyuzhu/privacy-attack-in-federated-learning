@@ -30,21 +30,23 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, rec_lr=0.0001, tv=1e-3, device
     :param device: cpu or cuda
     :return: dummy data & dummy label
     """
-    model.eval()
-
+    # be careful about the influence on model.train() & model.eval()
+    # especially dropout layer and bn layer are included in model
     flatten_gt_grads = torch.cat([g.view(-1) for g in gt_grads])
 
+    # unlike the official implementation, model reinitialization is not employed here
     generator = GRNNGenerator(dummy.n_classes, in_features=128, image_shape=dummy.image_shape).to(device)
     # update parameters of the generator other than dummy data
-    optimizer = torch.optim.RMSprop(generator.parameters(), lr=rec_lr, momentum=0.99)
+    G_optimizer = torch.optim.RMSprop(generator.parameters(), lr=rec_lr, momentum=0.99)
     tv_loss = TVLoss()
     random_noise = torch.randn(dummy.batch_size, 128).to(device)
 
     iter_bar = tqdm(range(rec_epochs),
                     total=rec_epochs,
-                    desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}')
+                    desc=f'{str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))}',
+                    ncols=180)
     for _ in iter_bar:
-        optimizer.zero_grad()
+        G_optimizer.zero_grad()
 
         # produce dummy data & label
         # softmax already produced upon dummy label
@@ -59,14 +61,14 @@ def grnn(model, gt_grads, dummy, rec_epochs=1000, rec_lr=0.0001, tv=1e-3, device
         grad_diff_wd = wasserstein_distance(flatten_dummy_grads, flatten_gt_grads)
         # total variation loss
         # tv = 1e-3 for LeNet, and tv = 1e-6 for ResNet18
-        loss_tv = tv * tv_loss(dummy_data)
-        grad_diff = grad_diff_l2 + grad_diff_wd + loss_tv
+        tvloss = tv * tv_loss(dummy_data)
+        grad_diff = grad_diff_l2 + grad_diff_wd + tvloss
 
         grad_diff.backward()
-        optimizer.step()
+        G_optimizer.step()
         iter_bar.set_postfix(loss_l2=np.round(grad_diff_l2.item(), 8),
                              loss_wd=np.round(grad_diff_wd.item(), 8),
-                             loss_tv=np.round(loss_tv.item(), 8))
+                             loss_tv=np.round(tvloss.item(), 8))
 
     dummy.append(dummy_data)
     rec_dummy_label = torch.argmax(dummy_label, dim=-1)
@@ -82,7 +84,7 @@ def wasserstein_distance(first_samples, second_samples, p=2):
     However, it seems incorrect ?
 
     """
-    w = torch.abs(first_samples[0] - second_samples[0])
+    w = torch.abs(first_samples - second_samples)
     w = torch.pow(torch.sum(torch.pow(w, p)), 1. / p)
     return torch.pow(torch.pow(w, p).mean(), 1. / p)
 

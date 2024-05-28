@@ -34,6 +34,11 @@ def save_fed_images(dummy: TorchDummy, args):
         if not os.path.exists(BASE_SAVE_PATH):
             os.makedirs(BASE_SAVE_PATH)
 
+        # if normalizing the data
+        if args.normalize:
+            nz = "nz"
+        else:
+            nz = "unz"
         # deal with imprint module
         if args.imprint:
             imp = "imp"
@@ -41,18 +46,18 @@ def save_fed_images(dummy: TorchDummy, args):
             imp = ""
 
         if args.iid == True:
-            filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{args.dataset}_{imp}{args.model}_iid_" \
+            filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{nz}{args.dataset}_{imp}{args.model}_iid_" \
                        f"{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
                        f"{args.total_clients}c_{args.num_rounds}r_{args.local_epochs}e_" \
                        f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
         else:
             if args.p_type == "dirichlet":
-                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{args.dataset}_{imp}{args.model}_" \
+                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{nz}{args.dataset}_{imp}{args.model}_" \
                            f"niid{args.beta}_{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
                            f"{args.total_clients}c_{args.num_rounds}r_{args.local_epochs}e_" \
                            f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
             else:
-                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{args.dataset}_{imp}{args.model}_" \
+                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{nz}{args.dataset}_{imp}{args.model}_" \
                            f"niid{args.num_classes_per_client}_" \
                            f"{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
                            f"{args.total_clients}c_{args.num_rounds}r_{args.local_epochs}e_" \
@@ -81,13 +86,18 @@ def save_images(images: list, args):
         if not os.path.exists(BASE_SAVE_PATH):
             os.makedirs(BASE_SAVE_PATH)
 
+        # if normalizing the data
+        if args.normalize:
+            nz = "nz"
+        else:
+            nz = "unz"
         # deal with imprint module
         if args.imprint:
             imp = "imp"
         else:
             imp = ""
 
-        filename = f"{BASE_SAVE_PATH}/{args.attack}_{args.num_exp}n_{args.dataset}_{imp}{args.model}_" \
+        filename = f"{BASE_SAVE_PATH}/{args.attack}_{args.num_exp}n_{nz}{args.dataset}_{imp}{args.model}_" \
                    f"{args.rec_batch_size}rb.png"
         plt.savefig(filename, bbox_inches='tight')
 

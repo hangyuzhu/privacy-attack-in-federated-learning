@@ -1,5 +1,8 @@
 from .neural_network import MnistMLP
 from .neural_network import CifarMLP
+from .neural_network import MnistLeNet5
+from .neural_network import CifarLeNet
+from .neural_network import GrnnLeNet
 from .neural_network import MnistConvNet
 from .neural_network import MnistConvNetNoDropout
 from .neural_network import CifarConvNet
@@ -26,6 +29,9 @@ from .imprint import ImprintModel
 __all__ = {
     "MnistMLP",
     "CifarMLP",
+    "MnistLeNet5",
+    "CifarLeNet",
+    "GrnnLeNet",
     "MnistConvNet",
     "MnistConvNetNoDropout",
     "CifarConvNet",

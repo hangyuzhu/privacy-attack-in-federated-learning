@@ -130,10 +130,14 @@ class GradientReconstructor:
             pbar.set_description("Rec. Loss {:.6}".format(rec_loss))
             scheduler.step()
 
+            # small trick 2: project into image space
             with torch.no_grad():
-                # small trick 2: project into image space
-                dummy_data.data = torch.max(
-                    torch.min(dummy_data, (1 - self.dummy.t_dm) / self.dummy.t_ds), -self.dummy.t_dm / self.dummy.t_ds)
+                if self.dummy.normalize:
+                    dummy_data.data = torch.max(
+                        torch.min(dummy_data, (1 - self.dummy.t_dm) / self.dummy.t_ds),
+                        -self.dummy.t_dm / self.dummy.t_ds)
+                else:
+                    dummy_data.data = torch.clamp(dummy_data, 0, 1)
 
         if self.convert_label:
             return dummy_data, torch.argmax(dummy_label, dim=-1)

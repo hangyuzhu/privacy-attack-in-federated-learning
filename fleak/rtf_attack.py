@@ -1,25 +1,54 @@
+import os
+import math
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from fleak.attack import dlg
-from fleak.attack import idlg
+from fleak.attack import invert_linear_layer
+from fleak.model.imprint import ImprintModel
+from fleak.utils.constants import BASE_SAVE_PATH
 from fleak.utils.options import get_dataset_options
 from fleak.utils.options import get_model_options
 from fleak.utils.save import save_images
 from fleak.attack.dummy import TorchDummyImage
+from fleak.utils.save import NUM_COLS, MAX_IMAGES
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
 
 
-def dlg_attack(args):
-    assert args.attack in ["dlg", "idlg"]
+def save_gt_images(images: list, args):
+    max_images = min(len(images), MAX_IMAGES)
+    num_rows = math.ceil(max_images / NUM_COLS)
+
+    if max_images == 1:
+        plt.imshow(images[0])
+        plt.axis('off')
+    else:
+        plt.figure(figsize=(NUM_COLS * 2, num_rows * 2))
+        for i in range(max_images):
+            plt.subplot(num_rows, NUM_COLS, i + 1)
+            plt.imshow(images[i])
+            plt.axis('off')
+
+    if args.save_results:
+        if not os.path.exists(BASE_SAVE_PATH):
+            os.makedirs(BASE_SAVE_PATH)
+
+        filename = f"{BASE_SAVE_PATH}/{args.attack}_gt_{args.dataset}_imp{args.model}_" \
+                   f"{args.rec_batch_size}rb.png"
+        plt.savefig(filename, bbox_inches='tight')
+
+    plt.show()
+
+
+def rtf_attack(args):
+    assert args.attack == "rtf"
     print(f"\n====== {args.attack} attack ======")
 
     # attack hyperparameters
-    args.num_exp = 10
-    args.rec_epochs = 300
-    args.rec_batch_size = 1
-    args.rec_lr = 1.0
+    args.num_exp = 1
+    args.rec_batch_size = 64
+    num_bins = 100
     print(f"\n====== Reconstruct {args.rec_batch_size} dummy data ======")
 
     # ======= Prepare Dataset ========
@@ -42,8 +71,7 @@ def dlg_attack(args):
 
     # ======= Create Model ========
     model_class = get_model_options(args.dataset)[args.model]
-    # be careful about model.train() & model.eval() issue
-    model = model_class(N_CLASSES[args.dataset]).to(args.device)
+    model = ImprintModel(N_CLASSES[args.dataset], model_class, dummy.input_shape, num_bins).to(args.device)
 
     images = []
     for i in range(args.num_exp):
@@ -65,11 +93,8 @@ def dlg_attack(args):
         gt_grads = [g.detach() for g in gt_grads]
 
         # ======= Private Attack =======
-        if args.attack == "dlg":
-            dlg(model, gt_grads, dummy, args.rec_epochs, args.rec_lr, device=args.device)
-        else:
-            idlg(model, gt_grads, dummy, args.rec_epochs, args.rec_lr, device=args.device)
+        invert_linear_layer(gt_grads, dummy)
 
     # save
-    images += dummy.history
-    save_images(images, args)
+    save_gt_images(images, args)
+    save_images(dummy.history, args)

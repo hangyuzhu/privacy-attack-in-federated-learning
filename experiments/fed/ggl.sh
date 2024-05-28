@@ -10,6 +10,7 @@ python server_attack.py \
     --model cnn \
     --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
+    --normalize \
     --p_type dirichlet \
     --beta 0.5 \
     --total_clients 10 \

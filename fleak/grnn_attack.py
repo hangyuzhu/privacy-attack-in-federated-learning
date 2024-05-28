@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from fleak.attack import dlg
-from fleak.attack import idlg
+from fleak.attack import grnn
 from fleak.utils.options import get_dataset_options
 from fleak.utils.options import get_model_options
 from fleak.utils.save import save_images
@@ -11,15 +10,21 @@ from fleak.attack.dummy import TorchDummyImage
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
 
 
-def dlg_attack(args):
-    assert args.attack in ["dlg", "idlg"]
+def grnn_attack(args):
+    assert args.attack == "grnn"
     print(f"\n====== {args.attack} attack ======")
 
     # attack hyperparameters
     args.num_exp = 10
-    args.rec_epochs = 300
+    args.rec_epochs = 1000
     args.rec_batch_size = 1
-    args.rec_lr = 1.0
+    args.rec_lr = 0.0001
+    if args.model == "lenet" or args.model == "cnn":
+        tv = 1e-3
+    elif args.model == "resnet18":
+        tv = 1e-6
+    else:
+        raise ValueError(f"Unexpected model {args.model}")
     print(f"\n====== Reconstruct {args.rec_batch_size} dummy data ======")
 
     # ======= Prepare Dataset ========
@@ -41,6 +46,7 @@ def dlg_attack(args):
     )
 
     # ======= Create Model ========
+    # we do not perform reinitialization of model parameters for both model and generator
     model_class = get_model_options(args.dataset)[args.model]
     # be careful about model.train() & model.eval() issue
     model = model_class(N_CLASSES[args.dataset]).to(args.device)
@@ -65,10 +71,7 @@ def dlg_attack(args):
         gt_grads = [g.detach() for g in gt_grads]
 
         # ======= Private Attack =======
-        if args.attack == "dlg":
-            dlg(model, gt_grads, dummy, args.rec_epochs, args.rec_lr, device=args.device)
-        else:
-            idlg(model, gt_grads, dummy, args.rec_epochs, args.rec_lr, device=args.device)
+        grnn(model, gt_grads, dummy, args.rec_epochs, args.rec_lr, tv, args.device)
 
     # save
     images += dummy.history

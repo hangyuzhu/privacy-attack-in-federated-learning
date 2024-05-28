@@ -1,6 +1,6 @@
 DATASETS = ['mnist', 'cifar10', 'cifar100', 'tiny_imagenet']
 
-MODELS = ['mlp', 'cnn', 'simple_cnn',
+MODELS = ['mlp', 'lenet', 'cnn', 'simple_cnn',
           'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
           'fc2', 'vgg16']
 MODE = ['test', 'valid']

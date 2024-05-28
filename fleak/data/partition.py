@@ -129,7 +129,7 @@ def split_train_valid_test(user_data_indexes, valid_ratio: float, test_ratio: fl
     return train_index, valid_index, test_index
 
 
-def partition_dataset(dataset: str, base_data_dir: str, data_augment: bool, p_method: dict, n_parties,
+def partition_dataset(dataset: str, base_data_dir: str, normalize: bool, data_augment: bool, p_method: dict, n_parties,
                       valid_prop=0, test_prop=0.2, verbose=True):
     """
     Training part of the original dataset is allocated to multiple parties, each party manually
@@ -138,6 +138,7 @@ def partition_dataset(dataset: str, base_data_dir: str, data_augment: bool, p_me
 
     :param dataset: name of the dataset
     :param base_data_dir: base directory of the dataset
+    :param normalize: if normalizing the data
     :param data_augment: if using data augmentation
     :param p_method: partition method
     :param n_parties: number of users
@@ -150,13 +151,13 @@ def partition_dataset(dataset: str, base_data_dir: str, data_augment: bool, p_me
     data_dir = f"{base_data_dir}/{dataset}"
 
     if dataset == 'mnist':
-        train_dataset, test_dataset = load_mnist_dataset(data_dir, data_augment=data_augment)
+        train_dataset, test_dataset = load_mnist_dataset(data_dir, normalize, data_augment=data_augment)
     elif dataset == 'cifar10':
-        train_dataset, test_dataset = load_cifar10_dataset(data_dir, data_augment=data_augment)
+        train_dataset, test_dataset = load_cifar10_dataset(data_dir, normalize, data_augment=data_augment)
     elif dataset == 'cifar100':
-        train_dataset, test_dataset = load_cifar100_dataset(data_dir, data_augment=data_augment)
+        train_dataset, test_dataset = load_cifar100_dataset(data_dir, normalize, data_augment=data_augment)
     elif dataset == 'tiny_imagenet':
-        train_dataset, test_dataset = load_tiny_imagenet_dataset(data_dir, data_augment=data_augment)
+        train_dataset, test_dataset = load_tiny_imagenet_dataset(data_dir, normalize, data_augment=data_augment)
     else:
         raise TypeError('{} is not an expected dataset !'.format(dataset))
 

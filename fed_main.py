@@ -20,6 +20,7 @@ def main(args):
     train_loaders, valid_loaders, test_loaders, test_loader = federated_dataloaders(
         dataset=args.dataset,
         base_data_dir=args.base_data_dir,
+        normalize=args.normalize,
         data_augment=args.data_augment,
         p_method=partition_method,
         n_parties=args.total_clients,
@@ -111,6 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('--base_data_dir', default='data',
                         type=str, help='base data directory of the dataset')
     parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--normalize', default=False, action='store_true', help='If normalizing data')
     parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
     parser.add_argument('--test_prop', type=float, default=0.2, help='proportion of test data')

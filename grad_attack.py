@@ -1,13 +1,18 @@
-from fleak.dlg_attack import dlg_attack
-from fleak.ig_attack import ig_attack
+import fleak
 from fleak.utils.constants import DATASETS, MODELS, ATTACKS
 
 
 def main(args):
     if args.attack == "dlg" or args.attack == "idlg":
-        dlg_attack(args)
+        fleak.dlg_attack(args)
     elif args.attack == "ig_single" or args.attack == "ig_weight" or args.attack == "ig_multi":
-        ig_attack(args)
+        fleak.ig_attack(args)
+    elif args.attack == "rtf":
+        fleak.rtf_attack(args)
+    elif args.attack == "ggl":
+        fleak.ggl_attack(args)
+    elif args.attack == "grnn":
+        fleak.grnn_attack(args)
 
 
 if __name__ == "__main__":
@@ -24,10 +29,12 @@ if __name__ == "__main__":
     parser.add_argument('--base_data_dir', default='../federated_learning/data', type=str,
                         help='base directory of the dataset')
     parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--normalize', default=False, action='store_true', help='If normalizing data')
     parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
     # device
     parser.add_argument('--device', default='cuda', help='device')
     parser.add_argument('--save_results', default=False, action='store_true', help='if saving the results')
     args = parser.parse_args()
+    print(args)
 
     main(args)

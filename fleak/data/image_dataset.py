@@ -159,109 +159,70 @@ Caution: IMAGE_MEAN_GAN & IMAGE_STD_GAN are selected here for the purpose of tra
 """
 
 
-def load_mnist_dataset(data_dir, dm=None, ds=None, data_augment=False):
-    if dm is None:
-        dm = IMAGE_MEAN_GAN["mnist"]
-    if ds is None:
-        ds = IMAGE_STD_GAN["mnist"]
+def load_mnist_dataset(data_dir, normalize=True, data_augment=False):
+    transform_train_list, transform_eval_list = [transforms.ToTensor()], [transforms.ToTensor()]
     if data_augment:
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(28, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds),
-        ])
-    else:
-        # ToTensor normalize images to 0 ~ 1
-        transform_train = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds)
-        ])
+        transform_train_list += [transforms.RandomCrop(28, padding=4),
+                                 transforms.RandomHorizontalFlip()]
+    if normalize:
+        dm, ds = IMAGE_MEAN_GAN["mnist"], IMAGE_STD_GAN["mnist"]
+        transform_train_list += [transforms.Normalize(dm, ds)]
+        transform_eval_list += [transforms.Normalize(dm, ds)]
+    transform_train = transforms.Compose(transform_train_list)
+    transform_eval = transforms.Compose(transform_eval_list)
 
-    transform_eval = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(dm, ds),
-    ])
     train_dataset = datasets.MNIST(data_dir, train=True, download=True, transform=transform_train)
     test_dataset = datasets.MNIST(data_dir, train=False, transform=transform_eval)
     return train_dataset, test_dataset
 
 
-def load_cifar10_dataset(data_dir, dm=None, ds=None, data_augment=False):
-    if dm is None:
-        dm = IMAGE_MEAN_GAN["cifar10"]
-    if ds is None:
-        ds = IMAGE_STD_GAN["cifar10"]
+def load_cifar10_dataset(data_dir, normalize=True, data_augment=False):
+    transform_train_list, transform_eval_list = [transforms.ToTensor()], [transforms.ToTensor()]
     if data_augment:
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds),
-        ])
-    else:
-        transform_train = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds),
-        ])
+        transform_train_list += [transforms.RandomCrop(32, padding=4),
+                                 transforms.RandomHorizontalFlip()]
+    if normalize:
+        dm, ds = IMAGE_MEAN_GAN["cifar10"], IMAGE_STD_GAN["cifar10"]
+        transform_train_list += [transforms.Normalize(dm, ds)]
+        transform_eval_list += [transforms.Normalize(dm, ds)]
+    transform_train = transforms.Compose(transform_train_list)
+    transform_eval = transforms.Compose(transform_eval_list)
 
-    transform_eval = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(dm, ds),
-    ])
     train_dataset = datasets.CIFAR10(data_dir, train=True, download=True, transform=transform_train)
     test_dataset = datasets.CIFAR10(data_dir, train=False, download=True, transform=transform_eval)
     return train_dataset, test_dataset
 
 
-def load_cifar100_dataset(data_dir, dm=None, ds=None, data_augment=False):
-    if dm is None:
-        dm = IMAGE_MEAN_GAN["cifar100"]
-    if ds is None:
-        ds = IMAGE_STD_GAN["cifar100"]
+def load_cifar100_dataset(data_dir, normalize=True, data_augment=False):
+    transform_train_list, transform_eval_list = [transforms.ToTensor()], [transforms.ToTensor()]
     if data_augment:
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(15),
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds)
-        ])
-    else:
-        transform_train = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds)
-        ])
-    transform_eval = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(dm, ds)
-    ])
+        transform_train_list += [transforms.RandomCrop(32, padding=4),
+                                 transforms.RandomHorizontalFlip(),
+                                 transforms.RandomRotation(15)]
+    if normalize:
+        dm, ds = IMAGE_MEAN_GAN["cifar100"], IMAGE_STD_GAN["cifar100"]
+        transform_train_list += [transforms.Normalize(dm, ds)]
+        transform_eval_list += [transforms.Normalize(dm, ds)]
+    transform_train = transforms.Compose(transform_train_list)
+    transform_eval = transforms.Compose(transform_eval_list)
+
     train_dataset = datasets.CIFAR100(data_dir, train=True, download=True, transform=transform_train)
     test_dataset = datasets.CIFAR100(data_dir, train=False, download=True, transform=transform_eval)
     return train_dataset, test_dataset
 
 
-def load_tiny_imagenet_dataset(data_dir, dm=None, ds=None, data_augment=False):
-    if dm is None:
-        dm = IMAGE_MEAN_GAN["tiny_imagenet"]
-    if ds is None:
-        ds = IMAGE_STD_GAN["tiny_imagenet"]
+def load_tiny_imagenet_dataset(data_dir, normalize=True, data_augment=False):
+    transform_train_list, transform_eval_list = [transforms.ToTensor()], [transforms.ToTensor()]
     if data_augment:
-        transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(64),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds)
-        ])
-    else:
-        transform_train = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(dm, ds)
-        ])
-    transform_eval = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(dm, ds),
-    ])
+        transform_train_list += [transforms.RandomCrop(64),
+                                 transforms.RandomHorizontalFlip()]
+    if normalize:
+        dm, ds = IMAGE_MEAN_GAN["tiny_imagenet"], IMAGE_STD_GAN["tiny_imagenet"]
+        transform_train_list += [transforms.Normalize(dm, ds)]
+        transform_eval_list += [transforms.Normalize(dm, ds)]
+    transform_train = transforms.Compose(transform_train_list)
+    transform_eval = transforms.Compose(transform_eval_list)
+
     train_dataset = TinyImageNet(data_dir, train=True, transform=transform_train)
     test_dataset = TinyImageNet(data_dir, train=False, transform=transform_eval)
     return train_dataset, test_dataset
