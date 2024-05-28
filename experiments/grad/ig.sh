@@ -9,6 +9,7 @@ python grad_attack.py \
     --model cnn \
     --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
+    --normalize \
     --device cuda \
     --save_results
 
@@ -18,6 +19,7 @@ python grad_attack.py \
     --model cnn \
     --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
+    --normalize \
     --device cuda \
     --save_results
 
@@ -27,5 +29,6 @@ python grad_attack.py \
     --model cnn \
     --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
+    --normalize \
     --device cuda \
     --save_results
