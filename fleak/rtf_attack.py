@@ -34,14 +34,22 @@ def save_gt_images(images: list, args):
         if not os.path.exists(BASE_SAVE_PATH):
             os.makedirs(BASE_SAVE_PATH)
 
-        filename = f"{BASE_SAVE_PATH}/{args.attack}_gt_{args.dataset}_imp{args.model}_" \
-                   f"{args.rec_batch_size}rb.png"
+        # if normalizing the data
+        if args.normalize:
+            nz = "nz"
+        else:
+            nz = "unz"
+
+        filename = f"{BASE_SAVE_PATH}/{args.attack}_gt{nz}_{args.dataset}_imp{args.model}_" \
+                   f"{args.rec_batch_size}rb.pdf"
         plt.savefig(filename, bbox_inches='tight')
 
     plt.show()
 
 
 def rtf_attack(args):
+    """ Don't care about model.eval() issue """
+
     assert args.attack == "rtf"
     print(f"\n====== {args.attack} attack ======")
 

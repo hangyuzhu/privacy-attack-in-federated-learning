@@ -11,13 +11,21 @@ from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMA
 
 
 def grnn_attack(args):
+    """
+
+    GRNN is sensitive to data normalization
+    Unnormalizaing data would make the dummy data with much better quality
+    Do not switch to model.eval()
+
+    """
+
     assert args.attack == "grnn"
     print(f"\n====== {args.attack} attack ======")
 
     # attack hyperparameters
     args.num_exp = 10
     args.rec_epochs = 1000
-    args.rec_batch_size = 1
+    args.rec_batch_size = 4
     args.rec_lr = 0.0001
     if args.model == "lenet" or args.model == "cnn":
         tv = 1e-3

@@ -49,19 +49,19 @@ def save_fed_images(dummy: TorchDummy, args):
             filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{nz}{args.dataset}_{imp}{args.model}_iid_" \
                        f"{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
                        f"{args.total_clients}c_{args.num_rounds}r_{args.local_epochs}e_" \
-                       f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
+                       f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.pdf"
         else:
             if args.p_type == "dirichlet":
                 filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{nz}{args.dataset}_{imp}{args.model}_" \
                            f"niid{args.beta}_{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
                            f"{args.total_clients}c_{args.num_rounds}r_{args.local_epochs}e_" \
-                           f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
+                           f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.pdf"
             else:
                 filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.attack}_{nz}{args.dataset}_{imp}{args.model}_" \
                            f"niid{args.num_classes_per_client}_" \
                            f"{args.rec_epochs}re_{args.rec_batch_size}rb_{args.rec_lr}rl_" \
                            f"{args.total_clients}c_{args.num_rounds}r_{args.local_epochs}e_" \
-                           f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.png"
+                           f"{args.batch_size}b_{args.lr}l_{args.client_momentum}m.pdf"
         plt.savefig(filename, bbox_inches='tight')
 
     # show images
@@ -98,7 +98,7 @@ def save_images(images: list, args):
             imp = ""
 
         filename = f"{BASE_SAVE_PATH}/{args.attack}_{args.num_exp}n_{nz}{args.dataset}_{imp}{args.model}_" \
-                   f"{args.rec_batch_size}rb.png"
+                   f"{args.rec_batch_size}rb.pdf"
         plt.savefig(filename, bbox_inches='tight')
 
     plt.show()
@@ -109,6 +109,11 @@ def save_acc(eval_acc: list, args):
         if not os.path.exists(BASE_SAVE_PATH):
             os.makedirs(BASE_SAVE_PATH)
 
+        # if normalizing the data
+        if args.normalize:
+            nz = "nz"
+        else:
+            nz = "unz"
         # deal with imprint module
         if args.imprint:
             imp = "imp"
@@ -116,16 +121,16 @@ def save_acc(eval_acc: list, args):
             imp = ""
 
         if args.iid == True:
-            filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.dataset}_{imp}{args.model}_iid_{args.total_clients}c_" \
-                       f"{args.num_rounds}r_{args.local_epochs}e_{args.batch_size}b_{args.lr}l_" \
+            filename = f"{BASE_SAVE_PATH}/{args.strategy}_{nz}{args.dataset}_{imp}{args.model}_iid_" \
+                       f"{args.total_clients}c_{args.num_rounds}r_{args.local_epochs}e_{args.batch_size}b_{args.lr}l_" \
                        f"{args.client_momentum}m.txt"
         else:
             if args.p_type == "dirichlet":
-                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.dataset}_{imp}{args.model}_" \
+                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{nz}{args.dataset}_{imp}{args.model}_" \
                            f"niid{args.beta}_{args.total_clients}c_{args.num_rounds}r_" \
                            f"{args.local_epochs}e_{args.batch_size}b_{args.lr}l_{args.client_momentum}m.txt"
             else:
-                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{args.dataset}_{imp}{args.model}_" \
+                filename = f"{BASE_SAVE_PATH}/{args.strategy}_{nz}{args.dataset}_{imp}{args.model}_" \
                            f"niid{args.num_classes_per_client}_{args.total_clients}c_{args.num_rounds}r_" \
                            f"{args.local_epochs}e_{args.batch_size}b_{args.lr}l_{args.client_momentum}m.txt"
         with open(filename, 'w') as file:

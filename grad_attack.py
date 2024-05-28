@@ -13,6 +13,10 @@ def main(args):
         fleak.ggl_attack(args)
     elif args.attack == "grnn":
         fleak.grnn_attack(args)
+    elif args.attack == "cpa":
+        fleak.cpa_attack(args)
+    else:
+        raise TypeError("Unexpected ")
 
 
 if __name__ == "__main__":

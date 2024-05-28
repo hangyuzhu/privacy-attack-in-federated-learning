@@ -13,6 +13,8 @@ from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMA
 
 
 def ggl_attack(args):
+    """ Switch to model.eval() """
+
     assert args.attack == "ggl"
     print(f"\n====== {args.attack} attack ======")
 

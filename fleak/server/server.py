@@ -149,6 +149,8 @@ class ServerAttacker(Server):
         :param args: attack arguments
         :return: reconstructed data and labels
         """
+        # once self.select_clients is called, the sequence order of clients would be shuffled
+        # thus, selecting the first update is equivalent to picking a random update
         local_grads = self.extract_gradients(self.updates[0][-1])
         # replace the global model by client model
         self.global_model.load_state_dict(self.updates[0][-1])
