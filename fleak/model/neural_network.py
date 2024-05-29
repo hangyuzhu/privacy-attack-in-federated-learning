@@ -4,7 +4,7 @@ Caution: 1) If the model is required to be wrapped by MetaModel, all the modules
             built 'sequentially'. And for those modules not containing trainable parameters,
             try to use nn.Module other than nn.functional method !
          2) Dropout layer is sensitive to the outcome of generated dummy images, remove it or
-            set it to zero would get much better and more valid results
+            set the dropout rate to zero would get much better and more valid results
 
 """
 

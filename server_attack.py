@@ -132,7 +132,7 @@ if __name__ == '__main__':
     # training hyperparameters ----------------------------------------------------------------------------
     parser.add_argument('--strategy', type=str, default='fedavg', choices=STRATEGY,
                         help='strategy used in federated learning')
-    parser.add_argument('--num_rounds', default=50, type=int, help='num_rounds')
+    parser.add_argument('--num_rounds', default=10, type=int, help='num_rounds')
     parser.add_argument('--total_clients', default=10, type=int, help='total number of clients')
     parser.add_argument('--C', default=1, type=float, help='connection ratio')
     parser.add_argument('--local_epochs', default=2, type=int, metavar='N',
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     # dataset -----------------------------------------------------------------------------------------------
     parser.add_argument('--base_data_dir', default='../federated_learning/data', type=str,
                         help='base directory of the dataset')
-    parser.add_argument('--dataset', default='mnist', type=str, choices=DATASETS, help='The training dataset')
+    parser.add_argument('--dataset', default='cifar10', type=str, choices=DATASETS, help='The training dataset')
     parser.add_argument('--data_augment', default=False, action='store_true', help='If using data augmentation')
     parser.add_argument('--normalize', default=False, action='store_true', help='If normalizing data')
     parser.add_argument('--valid_prop', type=float, default=0., help='proportion of validation data')
@@ -163,7 +163,7 @@ if __name__ == '__main__':
                         help='number of data classes on one client')
 
     # device & save ------------------------------------------------------------------------------------------
-    parser.add_argument('--device', default='cuda:0', help='device')
+    parser.add_argument('--device', default='cuda', help='device')
     parser.add_argument('--save_results', default=False, action='store_true', help='if saving the results')
 
     # attack -------------------------------------------------------------------------------------------------

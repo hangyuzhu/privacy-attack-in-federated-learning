@@ -16,7 +16,7 @@ def main(args):
     elif args.attack == "cpa":
         fleak.cpa_attack(args)
     else:
-        raise TypeError("Unexpected ")
+        raise TypeError(f"Unexpected attack method: {args.attack}")
 
 
 if __name__ == "__main__":
