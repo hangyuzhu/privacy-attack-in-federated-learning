@@ -27,7 +27,7 @@ sh dlg.sh
 ```
 Note that, you can change *BASE_DATADIR in .sh file* to your own downloaded data directory.
 
-### federated Attack
+### Server Side Attack
 Produce privacy attacks in more realistic federated environment. The corresponding shells are located in
 ./experiments/fed folder, and you can easily run for example DLG method in federated learning by the following
 command:
@@ -50,16 +50,39 @@ built 'sequentially'. We reimplement the original source code to avoid *memory l
 
 
 ## Data Processing
-Scaling: for a typical 8-class image ranges from 0 to 255, the scaling process utilizes the following math equation:
+Scaling: for a typical 8-class image ranges from 0 to 255, the scaling process is $x_{\text{scaled}}=x/255$, where $x$
+is the scaled image and $x$ is the original image.
+
+Normalize: data normalization is sensitive to the quality of dummy images in GRNN. The process of normalization is
+shown below:
 ```math
-\left( \sum_{k=1}^n a_k b_k \right)^2 \leq \left( \sum_{k=1}^n a_k^2 \right) \left( \sum_{k=1}^n b_k^2 \right)
+x_{\text{norm}}=\frac{x_{\text{scaled}}-x_{\mu}}{x_{\text{std}}}
 ```
+where $x_{\mu}$ and $x_{\text{std}}$ are mean and standard deviation of the scaled data $x_{\text{scaled}}$, respectively.
+According to our experimental simulations, setting 0.5 for both $x_{\mu}$ and $x_{\text{std}}$ may enhance the quality
+of generated fake images
 
-The mean and standard deviation are sensitive to the quality of generated fake images of GAN. We select 0.5 for both of them.
+## Deep Leakage Gradient (DLG)
+The original paper can be found [here](https://proceedings.neurips.cc/paper/2019/file/60a6c4002cc7b29142def8871531281a-Paper.pdf).
+Just run the following command for gradient attack:
+```sh
+cd ./experiment/grad
+sh dlg.sh
+```
+The corresponding outcomes are depicted below, where the first line is the ground-truth images and the 
+second line is the reconstructed images.
+![Gradient Attack](images/dlg_10n_nzcifar10_cnn_1rb.png)
 
-## Deep Leakage Gradient
+And run the following command for federated attack:
+```sh
+cd ./experiment/fed
+sh dlg.sh
+```
+Reconstructed dummy images are shown below:
+![Server Attack](images/fedavg_dlg_nzcifar10_cnn_niid0.5_300re_1rb_1.0rl_10c_10r_1e_50b_0.1l_0.0m.png)
 
-## Improved Leakage Gradient
+
+## Improved Deep Leakage Gradient (iDLG)
 
 ## Robbing the Fed
 
