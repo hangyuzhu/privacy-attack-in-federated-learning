@@ -40,7 +40,7 @@ def main(args):
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
                           client_model=model(N_CLASSES[args.dataset]),
-                          num_epochs=args.local_epochs,
+                          local_epochs=args.local_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,
                           momentum=args.client_momentum,

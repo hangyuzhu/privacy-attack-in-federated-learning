@@ -28,12 +28,19 @@ sh dlg.sh
 Note that, you can change *BASE_DATADIR in .sh file* to your own downloaded data directory.
 
 ### Server Side Attack
-Produce privacy attacks in more realistic federated environment. The corresponding shells are located in
+Produce privacy attacks in more realistic federated environment on server side. The corresponding shells are located in
 ./experiments/fed folder, and you can easily run for example DLG method in federated learning by the following
 command:
 ```sh
 cd ./experiment/fed
 sh dlg.sh
+```
+
+### Client Side Attack
+Produce DMGAN attack method in federated environment on client side. Just run
+```sh
+cd ./experiment/fed
+sh dmgan.sh
 ```
 
 ## Model
@@ -43,11 +50,10 @@ layers and so on are included in the constructed model
 2) Dropout layer is sensitive to the outcome of generated dummy images, *remove it or set the dropout rate to zero*
 would get much better and more valid results
 
-3) For running attack method of *ig_multi* or *ig_weight*, the model is required to be wrapped by MetaModel, all the modules should be
+3) For running attack methods *ig_multi* and *ig_weight*, the model is required to be wrapped by MetaModel and all the model modules should be
 built 'sequentially'. We reimplement the original source code to avoid *memory leakage* problem.
 
-4) Utilizing pretrained models does affect the attack performance for GGL and feature inference attack in CPA.
-
+4) Utilizing pretrained models does affect the attack performance for GGL and feature inversion attack in CPA.
 
 ## Data Processing
 Scaling: for a typical 8-class image ranges from 0 to 255, the scaling process is $x_{\text{scaled}}=x/255$, where $x$
@@ -59,8 +65,18 @@ shown below:
 x_{\text{norm}}=\frac{x_{\text{scaled}}-x_{\mu}}{x_{\text{std}}}
 ```
 where $x_{\mu}$ and $x_{\text{std}}$ are mean and standard deviation of the scaled data $x_{\text{scaled}}$, respectively.
-According to our experimental simulations, setting 0.5 for both $x_{\mu}$ and $x_{\text{std}}$ may enhance the quality
+According to our experimental results, setting 0.5 for both $x_{\mu}$ and $x_{\text{std}}$ may enhance the quality
 of generated fake images
+
+## Deep Models Under the GAN (DMGAN)
+The original paper can be found [here](https://dl.acm.org/doi/10.1145/3133956.3134012).
+Possibly the earliest privacy attack method for federated learning (only valid on MNIST dataset). Just run the following command:
+```sh
+cd ./experiment/fed
+sh dmgan.sh
+```
+Generated fake images across 50 communication rounds are shown below:
+![Client Attack](images/fedavg_dmgan_nzmnist_disc_niid0.5_10re_1rb_0rl_10c_50r_2e_50b_0.1l_0.0m.png)
 
 ## Deep Leakage Gradient (DLG)
 The original paper can be found [here](https://proceedings.neurips.cc/paper/2019/file/60a6c4002cc7b29142def8871531281a-Paper.pdf).
@@ -101,14 +117,14 @@ sh idlg.sh
 One dummy image generated in each of the *10 communication rounds* is shown below:
 ![Server Attack](images/fedavg_idlg_nzcifar10_cnn_niid0.5_300re_1rb_1.0rl_10c_10r_1e_50b_0.1l_0.0m.png)
 
-## Inverting Gradient
+## Inverting Gradients
 The original paper can be found [here](https://proceedings.neurips.cc/paper/2020/file/c4ede56bbd98819ae6112b20ac6bf145-Paper.pdf).
 Just run the following command for gradient attack:
 ```sh
 cd ./experiment/grad
 sh ig.sh
 ```
-The outcomes of multi-images (10) recovery for multiple gradient descent steps are shown below, where the first row 
+The outcomes of multi-images (10) recovery for multiple (5) gradient descent steps are shown below, where the first row 
 contains the ground-truth images and the second row contains the reconstructed images. Each experiment simultaneously
 recovers *10 images*.
 ![Gradient Attack](images/ig_multi_1n_nzcifar10_cnn_10rb.png)
@@ -136,7 +152,7 @@ And run the following command for federated attack:
 cd ./experiment/fed
 sh rtf.sh
 ```
-Batched dummy images (the number is undeterministic) generated in *1 communication rounds* are shown below:
+Batched dummy images (the number is undeterministic) generated in *1 communication round* are shown below:
 ![Server Attack](images/fedavg_rtf_nzcifar10_impresnet18_niid0.5_300re_1rb_1.0rl_10c_1r_1e_50b_0.1l_0.0m.png)
 
 ## Generative Gradient Leakage (GGL)

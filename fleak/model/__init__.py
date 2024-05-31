@@ -19,8 +19,9 @@ from .neural_network import CifarVGG
 from .gan import GGLGenerator
 from .gan import GGLDiscriminator
 from .gan import MnistGenerator
-from .gan import MnistDiscriminator
-from .gan import CifarDiscriminator
+from .gan import DMGanMnistDiscriminator
+from .gan import CifarGenerator
+from .gan import DMGanCifarDiscriminator
 
 from .meta import MetaModel
 from .imprint import ImprintModel
@@ -48,8 +49,9 @@ __all__ = {
     "GGLGenerator",
     "GGLDiscriminator",
     "MnistGenerator",
-    "MnistDiscriminator",
-    "CifarDiscriminator",
+    "DMGanMnistDiscriminator",
+    "CifarGenerator",
+    "DMGanCifarDiscriminator",
 
     "MetaModel",
     "ImprintModel"

@@ -36,7 +36,7 @@ def main(args):
     )
 
     # Assume the attacker holds the mean and std of the training data
-    # For methods like inverting linear layer, rec_batch_size can be arbitrary values
+    # For methods like robbing the fed, rec_batch_size can be arbitrary values
     dummy = TorchDummyImage(
         image_shape=IMAGE_SHAPE[args.dataset],
         batch_size=args.rec_batch_size,
@@ -77,7 +77,7 @@ def main(args):
     # ======= Create Clients ========
     all_clients = [Client(client_id=i,
                           client_model=model(N_CLASSES[args.dataset]),
-                          num_epochs=args.local_epochs,
+                          local_epochs=args.local_epochs,
                           lr=args.lr,
                           lr_decay=args.lr_decay,
                           momentum=args.client_momentum,

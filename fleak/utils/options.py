@@ -9,6 +9,11 @@ from ..model import FC2
 from ..model import TinyImageNetVGG
 from ..model import CifarVGG
 
+from ..model import MnistGenerator
+from ..model import DMGanMnistDiscriminator
+from ..model import CifarGenerator
+from ..model import DMGanCifarDiscriminator
+
 from ..data.image_dataset import load_mnist_dataset
 from ..data.image_dataset import load_cifar10_dataset
 from ..data.image_dataset import load_cifar100_dataset
@@ -27,6 +32,15 @@ def get_model_options(dataset):
         "vgg16": TinyImageNetVGG if dataset == 'tiny_imagenet' else CifarVGG
     }
     return model
+
+
+def get_dmgan_options(dataset):
+    if dataset == "mnist":
+        return MnistGenerator, DMGanMnistDiscriminator
+    elif dataset == "cifar10":
+        return CifarGenerator, DMGanCifarDiscriminator
+    else:
+        raise TypeError(f"Unexpected dataset: {dataset}")
 
 
 def get_dataset_options(dataset):

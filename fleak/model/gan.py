@@ -6,10 +6,10 @@ import torch.nn.functional as F
 
 class MnistGenerator(nn.Module):
 
-    def __init__(self):
+    def __init__(self, nz=100):
         super(MnistGenerator, self).__init__()
         self.linear = nn.Sequential(
-            nn.Linear(100, 7 * 7 * 256),   # 256x7x7
+            nn.Linear(nz, 7 * 7 * 256),   # 256x7x7
             nn.BatchNorm1d(7 * 7 * 256),
             nn.LeakyReLU()
         )
@@ -37,10 +37,10 @@ class MnistGenerator(nn.Module):
         return x
 
 
-class MnistDiscriminator(nn.Module):
+class DMGanMnistDiscriminator(nn.Module):
 
-    def __init__(self):
-        super(MnistDiscriminator, self).__init__()
+    def __init__(self, num_classes):
+        super(DMGanMnistDiscriminator, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 64, 4, 2, 1, bias=False),   # 64x14x14
             nn.LeakyReLU(),
@@ -51,7 +51,8 @@ class MnistDiscriminator(nn.Module):
             nn.LeakyReLU(),
             nn.Dropout2d(0.3)
         )
-        self.fc = nn.Linear(128 * 7 * 7, 11)
+        # add an extra classification class in the output layer
+        self.fc = nn.Linear(128 * 7 * 7, num_classes + 1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -59,6 +60,84 @@ class MnistDiscriminator(nn.Module):
         x = x.view(-1, 128 * 7 * 7)
         x = self.fc(x)
         return x
+
+
+class CifarGenerator(nn.Module):
+
+    def __init__(self, nz=100):
+        super(CifarGenerator, self).__init__()
+        self.main = nn.Sequential(
+            # input is Z, nz x 1 x 1
+            nn.ConvTranspose2d(nz, 256, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
+            # state size. 128 x 4 x 4
+            nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            # state size. 128 x 8 x 8
+            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            # state size. 64 x 16 x 16
+            nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # state size. 3 x 32 x 32
+        )
+
+    def forward(self, input):
+        input = input.view(-1, input.size(1), 1, 1)
+        output = self.main(input)
+        return output
+
+
+class CifarDiscriminator(nn.Module):
+
+    def __init__(self):
+        super(CifarDiscriminator, self).__init__()
+        self.main = nn.Sequential(
+            # input is 3 x 32 x 32
+            nn.Conv2d(3, 64, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 64 x 16 x 16
+            nn.Conv2d(64, 128, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 128 x 8 x 8
+            nn.Conv2d(128, 256, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 256 x 4 x 4
+            nn.Conv2d(256, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
+            # state size. 1 x 1 x 1
+        )
+
+    def forward(self, input):
+        output = self.main(input)
+        return output.view(-1, 1).squeeze(1)
+
+
+class DMGanCifarDiscriminator(nn.Module):
+
+    def __init__(self, num_classes):
+        super(DMGanCifarDiscriminator, self).__init__()
+        self.main = nn.Sequential(
+            # input is 3 x 32 x 32
+            nn.Conv2d(3, 64, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 64 x 16 x 16
+            nn.Conv2d(64, 128, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. 128 x 8 x 8
+            nn.Flatten(),
+            # add an extra classification class in the output layer
+            nn.Linear(128 * 8 * 8, num_classes + 1)
+        )
+
+    def forward(self, input):
+        return self.main(input)
 
 
 class GLU(nn.Module):
@@ -223,121 +302,3 @@ class GGLDiscriminator(nn.Module):
 
     def forward(self, x):
         return self.main(x)
-
-
-class CifarGenerator(nn.Module):
-
-    def __init__(self, nz=100):
-        super(CifarGenerator, self).__init__()
-        self.main = nn.Sequential(
-            # input is Z, nz x 1 x 1
-            nn.ConvTranspose2d(nz, 256, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(256),
-            nn.ReLU(True),
-            # state size. 128 x 4 x 4
-            nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.ReLU(True),
-            # state size. 128 x 8 x 8
-            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.ReLU(True),
-            # state size. 64 x 16 x 16
-            nn.ConvTranspose2d(64, 3, 4, 2, 1, bias=False),
-            nn.Tanh()
-            # state size. 3 x 32 x 32
-        )
-
-    def forward(self, input):
-        output = self.main(input)
-        return output
-
-
-class CifarDiscriminator(nn.Module):
-
-    def __init__(self):
-        super(CifarDiscriminator, self).__init__()
-        self.main = nn.Sequential(
-            # input is 3 x 32 x 32
-            nn.Conv2d(3, 64, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. 64 x 16 x 16
-            nn.Conv2d(64, 128, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. 128 x 8 x 8
-            nn.Conv2d(128, 256, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. 256 x 4 x 4
-            nn.Conv2d(256, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
-            # state size. 1 x 1 x 1
-        )
-
-    def forward(self, input):
-        output = self.main(input)
-        return output.view(-1, 1).squeeze(1)
-
-
-class Generator(nn.Module):
-    def __init__(self, channel=3, z_hidden=100, g_hidden=64):
-        super(Generator, self).__init__()
-        self.main = nn.Sequential(
-            # input layer
-            nn.ConvTranspose2d(z_hidden, g_hidden * 8, 4, 1, 0, bias=False),  # (g_hidden*8)x4x4
-            nn.BatchNorm2d(g_hidden * 8),
-            nn.ReLU(True),
-            # 1st hidden layer
-            nn.ConvTranspose2d(g_hidden * 8, g_hidden * 4, 4, 2, 1, bias=False),  # (g_hidden*4)x8x8
-            nn.BatchNorm2d(g_hidden * 4),
-            nn.ReLU(True),
-            # 2nd hidden layer
-            nn.ConvTranspose2d(g_hidden * 4, g_hidden * 2, 4, 2, 1, bias=False),  # (g_hidden*2)x16x16
-            nn.BatchNorm2d(g_hidden * 2),
-            nn.ReLU(True),
-            # 3rd hidden layer
-            nn.ConvTranspose2d(g_hidden * 2, g_hidden, 4, 2, 1, bias=False),  # g_hidden x32x32
-            nn.BatchNorm2d(g_hidden),
-            nn.ReLU(True),
-            # output layer
-            nn.ConvTranspose2d(g_hidden, channel, 4, 2, 1, bias=False),  # Cx64x64
-            nn.Tanh()
-        )
-
-    def forward(self, input):
-        return self.main(input)
-
-
-class Discriminator(nn.Module):
-    def __init__(self, channel=3, d_hidden=64):
-        super(Discriminator, self).__init__()
-        self.d_hidden = d_hidden
-
-        self.main = nn.Sequential(
-            # 1st layer
-            nn.Conv2d(channel, d_hidden, 4, 2, 1, bias=False),  # d_hiddenx32x32
-            nn.LeakyReLU(0.2, inplace=True),
-            # 2nd layer
-            nn.Conv2d(d_hidden, d_hidden * 2, 4, 2, 1, bias=False),  # (d_hidden*2)x16x16
-            nn.BatchNorm2d(d_hidden * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # 3rd layer
-            nn.Conv2d(d_hidden * 2, d_hidden * 4, 4, 2, 1, bias=False),  # (d_hidden*4)x8x8
-            nn.BatchNorm2d(d_hidden * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # 4th layer
-            nn.Conv2d(d_hidden * 4, d_hidden * 8, 4, 2, 1, bias=False),  # (d_hidden*8)x4x4
-            nn.BatchNorm2d(d_hidden * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # output layer
-            # nn.Conv2d(d_hidden * 8, 11, 4, 1, 0, bias=False),  # 1x1x1
-            # nn.Sigmoid()
-        )
-        self.fc = nn.Linear(d_hidden * 8 * 4 * 4, 11)
-
-    def forward(self, x):
-        x = self.main(x)
-        x = x.view(-1, self.d_hidden * 8 * 4 * 4)
-        return self.fc(x)

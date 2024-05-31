@@ -1,5 +1,5 @@
 from .client import Client
-from .ganclient import GanClient
+from .client import GanClient
 
 
 __all__ = {
