@@ -4,7 +4,8 @@ from .image_dataset import (
     load_mnist_dataset,
     load_cifar10_dataset,
     load_cifar100_dataset,
-    load_tiny_imagenet_dataset
+    load_tiny_imagenet_dataset,
+    load_imagenet_dataset
 )
 
 
@@ -158,6 +159,8 @@ def partition_dataset(dataset: str, base_data_dir: str, normalize: bool, data_au
         train_dataset, test_dataset = load_cifar100_dataset(data_dir, normalize, data_augment=data_augment)
     elif dataset == 'tiny_imagenet':
         train_dataset, test_dataset = load_tiny_imagenet_dataset(data_dir, normalize, data_augment=data_augment)
+    elif dataset == "imagenet":
+        train_dataset, test_dataset = load_imagenet_dataset(data_dir, normalize, data_augment=data_augment)
     else:
         raise TypeError('{} is not an expected dataset !'.format(dataset))
 

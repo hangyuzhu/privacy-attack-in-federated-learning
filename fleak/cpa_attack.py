@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torchvision import transforms
 
 from fleak.attack import cpa
 from fleak.utils.options import get_dataset_options
 from fleak.utils.options import get_model_options
 from fleak.utils.save import save_images
 from fleak.attack.dummy import TorchDummyImage
+from fleak.data.image_dataset import ImageNet
 from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
 
 
@@ -58,7 +60,7 @@ def cpa_fc(args):
     model_class = get_model_options(args.dataset)[args.model]
     # be careful about model.train() & model.eval() issue
     model = model_class(N_CLASSES[args.dataset]).to(args.device)
-    model.eval()
+    model.train()
 
     images = []
     for i in range(args.num_exp):
@@ -91,8 +93,11 @@ def cpa_fi(args):
     print(f"\n====== {args.attack} fi attack ======")
 
     # attack hyperparameters
+    args.pretrained = True
+    # pretrained model provided by PyTorch
+    model_file = "saved_models/vgg16-397923af.pth"
     args.num_exp = 1
-    args.rec_batch_size = 10
+    args.rec_batch_size = 64
     rec_epochs = 25000
     rec_lr = 1e-3
     decor = 5.3
@@ -103,11 +108,18 @@ def cpa_fi(args):
     fi = 1
     print(f"\n====== Reconstruct {args.rec_batch_size} dummy data ======")
 
-    # ======= Prepare Dataset ========
-    dataset_loader = get_dataset_options(args.dataset)
+    # ======= Prepare ImageNet ========
     data_dir = f"{args.base_data_dir}/{args.dataset}"
-
-    train_dataset, test_dataset = dataset_loader(data_dir, args.normalize, data_augment=args.data_augment)
+    transform_eval_list = [
+        transforms.ToTensor(),
+        transforms.Resize(size=(256, 256)),
+        transforms.CenterCrop(size=(224, 224))
+    ]
+    if args.normalize:
+        dm, ds = IMAGE_MEAN_GAN["imagenet"], IMAGE_STD_GAN["imagenet"]
+        transform_eval_list += [transforms.Normalize(dm, ds)]
+    transform_eval = transforms.Compose(transform_eval_list)
+    test_dataset = ImageNet(data_dir, train=False, transform=transform_eval)
     test_dl = DataLoader(test_dataset, batch_size=args.rec_batch_size, shuffle=True)
 
     # ======= Dummy =======
@@ -125,7 +137,9 @@ def cpa_fi(args):
     model_class = get_model_options(args.dataset)[args.model]
     # be careful about model.train() & model.eval() issue
     model = model_class(N_CLASSES[args.dataset]).to(args.device)
-    model.eval()
+    if args.pretrained:
+        model.load_state_dict(torch.load(model_file))
+    model.train()
 
     images = []
     for i in range(args.num_exp):

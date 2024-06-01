@@ -107,6 +107,28 @@ class TinyImageNet(ImageFolder):
         )
 
 
+class ImageNet(ImageFolder):
+
+    def __init__(
+        self,
+        root: str,
+        train=True,
+        transform=None,
+        target_transform=None,
+    ):
+        subfolder = "train" if train else "val"
+        root_sub = os.path.join(root, subfolder)
+
+        if not os.path.exists(root):
+            raise ValueError(f"Dataset not found at {root}.")
+
+        super().__init__(
+            root=root_sub,
+            transform=transform,
+            target_transform=target_transform,
+        )
+
+
 class DatasetSplit(Dataset):
 
     def __init__(self, dataset, idxs):
@@ -225,4 +247,26 @@ def load_tiny_imagenet_dataset(data_dir, normalize=True, data_augment=False):
 
     train_dataset = TinyImageNet(data_dir, train=True, transform=transform_train)
     test_dataset = TinyImageNet(data_dir, train=False, transform=transform_eval)
+    return train_dataset, test_dataset
+
+
+def load_imagenet_dataset(data_dir, normalize=True, data_augment=False):
+    transform_train_list, transform_eval_list = [transforms.ToTensor()], [transforms.ToTensor()]
+    if data_augment:
+        transform_train_list += [transforms.RandomCrop(224),
+                                 transforms.RandomHorizontalFlip()]
+    else:
+        transform_train_list += [transforms.Resize(size=(256, 256)),
+                                 transforms.CenterCrop(size=(224, 224))]
+    transform_eval_list += [transforms.Resize(size=(256, 256)),
+                            transforms.CenterCrop(size=(224, 224))]
+    if normalize:
+        dm, ds = IMAGE_MEAN_GAN["imagenet"], IMAGE_STD_GAN["imagenet"]
+        transform_train_list += [transforms.Normalize(dm, ds)]
+        transform_eval_list += [transforms.Normalize(dm, ds)]
+    transform_train = transforms.Compose(transform_train_list)
+    transform_eval = transforms.Compose(transform_eval_list)
+
+    train_dataset = ImageNet(data_dir, train=True, transform=transform_train)
+    test_dataset = ImageNet(data_dir, train=False, transform=transform_eval)
     return train_dataset, test_dataset

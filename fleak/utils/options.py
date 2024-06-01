@@ -6,8 +6,8 @@ from ..model import CifarConvNetNoDropout
 from ..model import ResNet18
 from ..model import ResNet34
 from ..model import FC2
+from ..model import CpaVGG16
 from ..model import TinyImageNetVGG
-from ..model import CifarVGG
 
 from ..model import MnistGenerator
 from ..model import DMGanMnistDiscriminator
@@ -18,6 +18,7 @@ from ..data.image_dataset import load_mnist_dataset
 from ..data.image_dataset import load_cifar10_dataset
 from ..data.image_dataset import load_cifar100_dataset
 from ..data.image_dataset import load_tiny_imagenet_dataset
+from ..data.image_dataset import load_imagenet_dataset
 
 
 def get_model_options(dataset):
@@ -29,7 +30,7 @@ def get_model_options(dataset):
         "resnet18": ResNet18,
         "resnet34": ResNet34,
         "fc2": FC2,
-        "vgg16": TinyImageNetVGG if dataset == 'tiny_imagenet' else CifarVGG
+        "vgg16": CpaVGG16 if dataset == 'imagenet' else TinyImageNetVGG
     }
     return model
 
@@ -52,5 +53,7 @@ def get_dataset_options(dataset):
         return load_cifar100_dataset
     elif dataset == 'tiny_imagenet':
         return load_tiny_imagenet_dataset
+    elif dataset == "imagenet":
+        return load_imagenet_dataset
     else:
         raise TypeError(f'{dataset} is not an expected dataset !')

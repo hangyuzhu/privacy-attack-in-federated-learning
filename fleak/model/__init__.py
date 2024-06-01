@@ -13,6 +13,7 @@ from .neural_network import ResNet50
 from .neural_network import ResNet101
 from .neural_network import ResNet152
 from .neural_network import FC2
+from .neural_network import CpaVGG16
 from .neural_network import TinyImageNetVGG
 from .neural_network import CifarVGG
 
@@ -43,6 +44,7 @@ __all__ = {
     "ResNet101",
     "ResNet152",
     "FC2",
+    "CpaVGG16",
     "TinyImageNetVGG",
     "CifarVGG",
 

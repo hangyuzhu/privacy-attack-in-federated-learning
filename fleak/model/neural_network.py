@@ -13,6 +13,7 @@ from typing import cast
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.models import VGG
 
 from ..data.image_dataset import IMAGE_SHAPE
 
@@ -299,6 +300,50 @@ class FC2(nn.Module):
 cfgs = [64, 64, "M", 128, 128, "M", 256, 256, 256, "M", 512, 512, 512, "M", 512, 512, 512, "M"]
 
 
+def make_layers(cfg, batch_norm: bool = False) -> nn.Sequential:
+    layers = []
+    in_channels = 3
+    for v in cfg:
+        if v == "M":
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        else:
+            v = cast(int, v)
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+            if batch_norm:
+                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+            else:
+                layers += [conv2d, nn.ReLU(inplace=True)]
+            in_channels = v
+    return nn.Sequential(*layers)
+
+
+class CpaVGG16(VGG):
+    """ VGG16 model used for imagenet in CPA attack """
+
+    def __init__(self, num_classes: int, features=make_layers(cfgs, False)):
+        super().__init__(features, num_classes)
+        layers = []
+        # Make dropout probability 0
+        for layer in self.classifier:
+            if isinstance(layer, nn.Dropout):
+                layer = nn.Dropout(p=0)
+            layers.append(layer)
+        self.classifier = nn.Sequential(*layers)
+        self.model_type = "cpa_cov"
+        self.pretrained = True
+        self.attack_index = 26
+
+    def forward(self, x: torch.Tensor, return_z=False) -> torch.Tensor:
+        x = self.features(x)
+        x = self.avgpool(x)
+        z = torch.flatten(x, 1)
+        x = self.classifier(z)
+        if return_z:
+            return x, z
+        else:
+            return x
+
+
 class TinyImageNetVGG(nn.Module):
 
     def __init__(self, num_classes, init_weights: bool = True, dropout: float = 0):
@@ -385,23 +430,6 @@ class CifarVGG(nn.Module):
             return x, z
         else:
             return x
-
-
-def make_layers(cfg, batch_norm: bool = False) -> nn.Sequential:
-    layers = []
-    in_channels = 3
-    for v in cfg:
-        if v == "M":
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
-        else:
-            v = cast(int, v)
-            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
-            if batch_norm:
-                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
-            else:
-                layers += [conv2d, nn.ReLU(inplace=True)]
-            in_channels = v
-    return nn.Sequential(*layers)
 
 
 class BasicBlock(nn.Module):

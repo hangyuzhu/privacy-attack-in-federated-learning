@@ -34,6 +34,7 @@ python server_attack.py \
 
 # run cpa + fi
 # non-iid
+# model is not pretrained
 python server_attack.py \
     --attack cpa \
     --model vgg16 \

@@ -1,4 +1,4 @@
-DATASETS = ['mnist', 'cifar10', 'cifar100', 'tiny_imagenet']
+DATASETS = ['mnist', 'cifar10', 'cifar100', 'tiny_imagenet', 'imagenet']
 
 MODELS = ['mlp', 'lenet', 'cnn', 'simple_cnn',
           'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
