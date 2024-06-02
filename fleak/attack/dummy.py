@@ -134,13 +134,6 @@ class TorchDummyImage(TorchDummy):
         if method == "ds":
             self.history.extend([self._it(x.detach().cpu()) for x in _dummy])
         elif method == "infer":
-            # orig_shape = _dummy.shape
-            # n = orig_shape[0]
-            # _dummy = _dummy.view([n, -1])
-            # _dummy = (_dummy - _dummy.min(dim=-1, keepdim=True)[0]) / (
-            #         _dummy.max(dim=-1, keepdim=True)[0] - _dummy.min(dim=-1, keepdim=True)[0]
-            # )
-            # _dummy = _dummy.view(orig_shape)
             for _img in _dummy:
                 _img = _img.permute(1, 2, 0).detach().cpu()
                 # retrieve image data without the requirement of mean and std
