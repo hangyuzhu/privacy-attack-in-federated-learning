@@ -181,6 +181,7 @@ if __name__ == '__main__':
                         help="Temperature for cosine similarity when computing decor loss in CPA")
     parser.add_argument("--nv", type=float, default=0, help="negative value penalty")
     parser.add_argument("--l1", type=float, default=0, help="L1 prior")
+    parser.add_argument('--fi_lr', default=1e-1, type=float, help='learning rate of feature inversion')
     parser.add_argument("--fi", type=float, default=1, help="feature inversion weight")
 
     args = parser.parse_args()

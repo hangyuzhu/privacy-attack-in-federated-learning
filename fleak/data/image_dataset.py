@@ -54,13 +54,16 @@ IMAGE_STD = {
 }
 
 # mean & std applied in GAN training
+# Caution: using pretrained model for imagenet dataset
+# apply the same mean & std in official pytorch training
 # mean
 IMAGE_MEAN_GAN = {
     "mnist": [0.5, ],
     "cifar10": [0.5, 0.5, 0.5],
     "cifar100": [0.5, 0.5, 0.5],
     "tiny_imagenet": [0.5, 0.5, 0.5],
-    "imagenet": [0.5, 0.5, 0.5],
+    "imagenet": [0.485, 0.456, 0.406],
+
 }
 # std
 IMAGE_STD_GAN = {
@@ -68,7 +71,7 @@ IMAGE_STD_GAN = {
     "cifar10": [0.5, 0.5, 0.5],
     "cifar100": [0.5, 0.5, 0.5],
     "tiny_imagenet": [0.5, 0.5, 0.5],
-    "imagenet": [0.5, 0.5, 0.5],
+    "imagenet": [0.229, 0.224, 0.225],
 }
 
 

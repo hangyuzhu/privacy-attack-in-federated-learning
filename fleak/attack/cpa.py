@@ -15,7 +15,7 @@ from .ig import GradientReconstructor
 from .ig import total_variation
 
 
-def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, decor, T, tv, nv, l1, fi, device):
+def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, fi_lr, decor, T, tv, nv, l1, fi, device):
     """Cocktail Party Attack (CPA)
 
     The core idea is to adopt independent component analysis (ICA) to recover inputs from aggregated gradients
@@ -27,6 +27,7 @@ def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, decor, T, tv, nv, l1, fi, de
     :param dummy: TorchDummy object
     :param rec_epochs: reconstruct epochs
     :param rec_lr: reconstruct learning rate
+    :param fi_lr: learning rate of feature inversion
     :param decor: decorrelation weight
     :param T: temperature for cosine similarity when computing decor loss in CPA
     :param tv: total Variation prior weight
@@ -51,7 +52,7 @@ def cpa(model, gt_grads, dummy, rec_epochs, rec_lr, decor, T, tv, nv, l1, fi, de
     rec_gi = gi.reconstruct(gt_grads)
 
     if inp_type == "emb":
-        fi = FeatureInversionAttack(model, dummy, rec_epochs, rec_lr, fi, tv, device)
+        fi = FeatureInversionAttack(model, dummy, rec_epochs, fi_lr, fi, tv, device)
         # make recovered embeds positive
         rec_fi = fi.reconstruct(rec_gi.abs())
         dummy_data = rec_fi
@@ -249,13 +250,13 @@ class CocktailPartyAttack(GradientReconstructor):
 class FeatureInversionAttack:
     """ Invert the embedding produced by a neural network to recover the input. """
 
-    def __init__(self, model, dummy, rec_epochs, rec_lr, fi, tv, device):
+    def __init__(self, model, dummy, rec_epochs, fi_lr, fi, tv, device):
         """
 
         :param model: inferred model
         :param dummy: TorchDummy object
         :param rec_epochs: reconstruct epochs
-        :param rec_lr: reconstruct learning rate
+        :param fi_lr: learning rate of feature inversion
         :param fi: feature inversion weight
         :param tv: total variation prior weight
         :param device: cpu or cuda
@@ -263,7 +264,7 @@ class FeatureInversionAttack:
         self.model = model
         self.dummy = dummy
         self.rec_epochs = rec_epochs
-        self.rec_lr = rec_lr
+        self.fi_lr = fi_lr
         self.fi = fi
         self.tv = tv
 
@@ -274,7 +275,7 @@ class FeatureInversionAttack:
 
     def reconstruct(self, rec_z):
         dummy_data = self.dummy.generate_dummy_input(device=self.device)
-        optimizer = optim.Adam([dummy_data], lr=self.rec_lr, weight_decay=0)
+        optimizer = optim.Adam([dummy_data], lr=self.fi_lr, weight_decay=0)
         cosine_similarity = nn.CosineSimilarity(dim=-1, eps=1e-10).to(self.device)
 
         # optimizer the fake data through reconstructed latent inputs

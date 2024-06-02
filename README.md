@@ -66,7 +66,12 @@ x_{\text{norm}}=\frac{x_{\text{scaled}}-x_{\mu}}{x_{\text{std}}}
 ```
 where $x_{\mu}$ and $x_{\text{std}}$ are mean and standard deviation of the scaled data $x_{\text{scaled}}$, respectively.
 According to our experimental results, setting 0.5 for both $x_{\mu}$ and $x_{\text{std}}$ may enhance the quality
-of generated fake images
+of generated GAN images.
+
+However, for CPA-FI attack using pretrained VGG16 model, adopting the officially released (PyTorch) mean and
+standard deviation of ImageNet would reconstruct images with higher quality. This implicitly indicate the fact
+that the recovered images are highly dependent on the pretrained model parameters which is actually a restriction
+for some specific privacy attack methods.
 
 ## Deep Models Under the GAN (DMGAN)
 The original paper can be found [here](https://dl.acm.org/doi/10.1145/3133956.3134012).
@@ -203,6 +208,10 @@ sh cpa.sh
 Only the outcome of cpa experiment is shown below (no feature inversion attack), where the first 5 rows contain the ground-truth images and the 
 last 5 rows contain the reconstructed images. Each experiment only recover the gradients with respect to *50 ground-truth images*
 ![Gradient Attack](images/cpa_1n_nztiny_imagenet_fc2_50rb.png)
+
+The outcome of cpa with feature inversion attack is shown below, where the first 3 rows contain the ground-truth images and the 
+last 3 rows contain the reconstructed images. Each experiment only recover the gradients with respect to *30 ground-truth images*
+![Gradient Attack](images/cpa_1n_nzimagenet_vgg16_30rb.png)
 
 And run the following command for federated attack:
 ```sh

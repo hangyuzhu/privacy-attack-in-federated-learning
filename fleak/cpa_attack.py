@@ -9,7 +9,7 @@ from fleak.utils.options import get_model_options
 from fleak.utils.save import save_images
 from fleak.attack.dummy import TorchDummyImage
 from fleak.data.image_dataset import ImageNet
-from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_MEAN_GAN, IMAGE_STD_GAN
+from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE, IMAGE_STD_GAN, IMAGE_MEAN_GAN
 
 
 def cpa_attack(args):
@@ -30,6 +30,7 @@ def cpa_fc(args):
     args.rec_batch_size = 50
     rec_epochs = 25000
     rec_lr = 0.001
+    fi_lr = 1e-1
     decor = 1.47
     T = 12.4
     tv = 3.1
@@ -82,7 +83,7 @@ def cpa_fc(args):
         gt_grads = [g.detach() for g in gt_grads]
 
         # ======= Private Attack =======
-        cpa(model, gt_grads, dummy, rec_epochs, rec_lr, decor, T, tv, nv, l1, fi, args.device)
+        cpa(model, gt_grads, dummy, rec_epochs, rec_lr, fi_lr, decor, T, tv, nv, l1, fi, args.device)
 
     # save
     images += dummy.history
@@ -94,12 +95,13 @@ def cpa_fi(args):
 
     # attack hyperparameters
     args.pretrained = True
-    # pretrained model provided by PyTorch
+    # pretrained vgg16 model provided by PyTorch
     model_file = "saved_models/vgg16-397923af.pth"
     args.num_exp = 1
-    args.rec_batch_size = 64
+    args.rec_batch_size = 30
     rec_epochs = 25000
     rec_lr = 1e-3
+    fi_lr = 1e-1
     decor = 5.3
     T = 7.7
     tv = 0.1
@@ -161,7 +163,7 @@ def cpa_fi(args):
         gt_grads = [g.detach() for g in gt_grads]
 
         # ======= Private Attack =======
-        cpa(model, gt_grads, dummy, rec_epochs, rec_lr, decor, T, tv, nv, l1, fi, args.device)
+        cpa(model, gt_grads, dummy, rec_epochs, rec_lr, fi_lr, decor, T, tv, nv, l1, fi, args.device)
 
     # save
     images += dummy.history

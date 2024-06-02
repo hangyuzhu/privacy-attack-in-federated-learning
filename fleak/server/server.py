@@ -223,6 +223,7 @@ class ServerAttacker(Server):
                 dummy=self.dummy,
                 rec_epochs=args.rec_epochs,
                 rec_lr=args.rec_lr,
+                fi_lr=args.fi_lr,
                 decor=args.decor,
                 T=args.T,
                 tv=args.tv,
