@@ -168,6 +168,8 @@ if __name__ == '__main__':
 
     # attack -------------------------------------------------------------------------------------------------
     parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
+    parser.add_argument('--multi_rec', default=False, action='store_true',
+                        help='if using multiple reconstruction from weights')
     parser.add_argument('--imprint', default=False, action='store_true',
                         help='if wrapping the model with imprint block')
     parser.add_argument('--rec_epochs', default=300, type=int, help="reconstruct epochs")

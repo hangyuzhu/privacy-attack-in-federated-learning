@@ -39,18 +39,6 @@ class Server:
         num_clients = min(num_clients, len(possible_clients))
         self.selected_clients = np.random.choice(possible_clients, num_clients, replace=False)
 
-    def extract_gradients(self, local_params):
-        """ Extract the gradients of any client model
-
-        Using named_parameters to avoid incorrect computation with running statistics
-        Caution: .detach() is adopted here to cut off the grad_fn
-
-        :param local_params: client model parameters
-        :return:
-        """
-        diffs = [(v - local_params[k]).detach() for k, v in self.global_model.named_parameters()]
-        return diffs
-
     def train_eval(self, clients=None, set_to_use='test'):
         if clients is None:
             clients = self.selected_clients
@@ -142,18 +130,45 @@ class ServerAttacker(Server):
             self.generator = generator.to(self.device)
         self.dummy = dummy
 
-    def attack(self, args):
+    def extract_gradients(self, local_params, iterations=1, lr=1):
+        """ Extract the gradients of any client model
+
+        The actual gradients are (W0-WT) / (T * lr), only valid for SGD without momentum
+
+        Using named_parameters to avoid incorrect computation with running statistics
+        Caution: .detach() is adopted here to cut off the grad_fn
+
+        :param local_params: client model parameters
+        :param iterations: number of update iterations
+        :param lr: local learning rate
+        :return:
+        """
+        diffs = [((v - local_params[k]) / (iterations * lr)).detach() for k, v in self.global_model.named_parameters()]
+        return diffs
+
+    def attack(self, args, clients=None):
         """
         Randomly select a client to infer its private data
 
         :param args: attack arguments
+        :param clients: possible clients
         :return: reconstructed data and labels
         """
-        # once self.select_clients is called, the sequence order of clients would be shuffled
-        # thus, selecting the first update is equivalent to picking a random update
-        local_grads = self.extract_gradients(self.updates[0][-1])
+        if clients is None:
+            clients = self.selected_clients
+        tot_clients = len(clients)
+        # randomly select one client to attack
+        attack_cid = np.random.randint(0, tot_clients)
+
+        if args.multi_rec and args.attack != "ig_multi":
+            # Towards General Deep Leakage in Federated Learning https://arxiv.org/pdf/2110.09074
+            # reconstruction from weights locally updated multiple steps
+            iterations, lr = (self.updates[attack_cid][1] / args.batch_size) * args.local_epochs, args.lr
+        else:
+            iterations, lr = 1, 1
+        local_grads = self.extract_gradients(self.updates[attack_cid][-1], iterations=iterations, lr=args.lr)
         # replace the global model by client model
-        self.global_model.load_state_dict(self.updates[0][-1])
+        self.global_model.load_state_dict(self.updates[attack_cid][-1])
 
         if args.attack == "dlg":
             dlg(
