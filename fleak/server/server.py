@@ -133,7 +133,8 @@ class ServerAttacker(Server):
     def extract_gradients(self, local_params, iterations=1, lr=1):
         """ Extract the gradients of any client model
 
-        The actual gradients are (W0-WT) / (T * lr), only valid for SGD without momentum
+        The ground-truth gradients are approximated by (W0 - WT) / (T * lr)
+        This is only valid for SGD without momentum
 
         Using named_parameters to avoid incorrect computation with running statistics
         Caution: .detach() is adopted here to cut off the grad_fn
