@@ -168,8 +168,8 @@ class ServerAttacker(Server):
         else:
             iterations, lr = 1, 1
         local_grads = self.extract_gradients(self.updates[attack_cid][-1], iterations=iterations, lr=args.lr)
-        # replace the global model by client model
-        self.global_model.load_state_dict(self.updates[attack_cid][-1])
+        # # replace the global model by client model
+        # self.global_model.load_state_dict(self.updates[attack_cid][-1])  # is it necessary ?
 
         if args.attack == "dlg":
             dlg(

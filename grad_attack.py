@@ -15,6 +15,8 @@ def main(args):
         fleak.grnn_attack(args)
     elif args.attack == "cpa":
         fleak.cpa_attack(args)
+    elif args.attack == "dlf":
+        fleak.dlf_attack(args)
     else:
         raise TypeError(f"Unexpected attack method: {args.attack}")
 

@@ -5,6 +5,8 @@ from .rtf import invert_linear_layer
 from .grnn import grnn
 from .ggl import ggl
 from .cpa import cpa
+from .dlf import dlf
+from .label import label_count_restoration
 
 
 __all__ = {
@@ -16,5 +18,7 @@ __all__ = {
     "invert_linear_layer",
     "grnn",
     "ggl",
-    "cpa"
+    "cpa",
+    "dlf",
+    "label_count_restoration"
 }

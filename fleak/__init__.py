@@ -6,6 +6,7 @@ from .rtf_attack import rtf_attack
 from .ggl_attack import ggl_attack
 from .grnn_attack import grnn_attack
 from .cpa_attack import cpa_attack
+from .dlf_attack import dlf_attack
 
 
 __all__ = {
@@ -14,5 +15,6 @@ __all__ = {
     "rtf_attack",
     "ggl_attack",
     "grnn_attack",
-    "cpa_attack"
+    "cpa_attack",
+    "dlf_attack"
 }

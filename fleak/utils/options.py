@@ -3,6 +3,7 @@ from ..model import CifarMLP
 from ..model import GrnnLeNet
 from ..model import MnistConvNetNoDropout
 from ..model import CifarConvNetNoDropout
+from ..model import DLFConvNet3
 from ..model import ResNet18
 from ..model import ResNet34
 from ..model import FC2
@@ -30,7 +31,8 @@ def get_model_options(dataset):
         "resnet18": ResNet18,
         "resnet34": ResNet34,
         "fc2": FC2,
-        "vgg16": CpaVGG16 if dataset == 'imagenet' else TinyImageNetVGG
+        "vgg16": CpaVGG16 if dataset == 'imagenet' else TinyImageNetVGG,
+        "cnn3": DLFConvNet3
     }
     return model
 
