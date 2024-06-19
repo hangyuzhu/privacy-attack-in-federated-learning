@@ -36,6 +36,13 @@ cd ./experiment/fed
 sh dlg.sh
 ```
 
+#### Label Restoration
+It is known that the server is not accessible to local client labels (training sequence). Thus, several work
+have investigated label restoration methods from gradients： 1） iDLG (only valid for single label restoration); 2)
+[Towards General Deep Leakage in Federated Learning](https://arxiv.org/pdf/2110.09074) (approximate label counts from
+averaged gradients with respect to a batch of data); 3) [https://openreview.net/pdf?id=e7A0B99zJf](https://openreview.net/pdf?id=e7A0B99zJf) 
+(based on the previous approach).
+
 ### Client Side Attack
 Produce DMGAN attack method in federated environment on client side. Just run
 ```sh
