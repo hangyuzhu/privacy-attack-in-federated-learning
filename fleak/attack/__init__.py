@@ -6,7 +6,6 @@ from .grnn import grnn
 from .ggl import ggl
 from .cpa import cpa
 from .dlf import dlf
-from .label import label_count_restoration
 
 
 __all__ = {
@@ -19,6 +18,5 @@ __all__ = {
     "grnn",
     "ggl",
     "cpa",
-    "dlf",
-    "label_count_restoration"
+    "dlf"
 }

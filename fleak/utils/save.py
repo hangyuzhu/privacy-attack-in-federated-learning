@@ -1,6 +1,7 @@
 import os
 import json
 import math
+from random import shuffle
 import matplotlib.pyplot as plt
 
 from .constants import BASE_SAVE_PATH
@@ -13,6 +14,9 @@ MAX_IMAGES = 100
 
 def save_fed_images(dummy: TorchDummy, args):
     max_images = min(len(dummy.history), MAX_IMAGES)
+    if len(dummy.history) > max_images:
+        # shuffle
+        shuffle(dummy.history)
     num_rows = math.ceil(max_images / NUM_COLS)
 
     plt.figure(figsize=(NUM_COLS * 2, num_rows * 2))

@@ -1,6 +1,6 @@
 # Federated Privacy Attack
 
-This repository includes 8 privacy attack algorithms employed in federated learning. We follow the official implementations
+This repository includes more than 8 privacy attack algorithms employed in federated learning. We follow the official implementations
 released by the authors of the original paper, and remove redundant parts to make them as simple as possible.
 
 Most algorithms have ability to reconstruct high-quality dummy images through the gradients with respect to a single
@@ -220,3 +220,15 @@ sh cpa.sh
 ```
 4 dummy images generated in each of the *10 communication rounds* is shown below:
 ![Server Attack](images/fedavg_cpa_nztiny_imagenet_fc2_niid0.5_25000re_4rb_0.001rl_10c_10r_1e_50b_0.1l_0.0m.png)
+
+## Data Leakage in Federated Averaging (DLF)
+The original paper can be found [here](https://openreview.net/pdf?id=e7A0B99zJf), which critically
+tackle the data restoration for multiple local updates problems.
+Just run the following command for gradient attack:
+```sh
+cd ./experiment/grad
+sh dlf.sh
+```
+Note that, this is the result using real labels for image restoration. If you want to restore
+images with inferred labels, just set restore_label = True in file fleak/dlf_attack.py
+![Gradient Attack](images/dlf_1n_nzcifar100_cnn3_10rb.png)

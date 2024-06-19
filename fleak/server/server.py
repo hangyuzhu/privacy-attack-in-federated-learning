@@ -8,6 +8,9 @@ from ..attack import invert_linear_layer
 from ..attack import grnn
 from ..attack import ggl
 from ..attack import cpa
+from ..attack import dlf
+from ..attack.label import label_count_restoration
+from ..attack.label import label_count_to_label
 
 
 class Server:
@@ -161,15 +164,16 @@ class ServerAttacker(Server):
         # randomly select one client to attack
         attack_cid = np.random.randint(0, tot_clients)
 
-        if args.multi_rec and args.attack != "ig_multi":
+        if args.attack == "gdl":
             # Towards General Deep Leakage in Federated Learning https://arxiv.org/pdf/2110.09074
             # reconstruction from weights locally updated multiple steps
             iterations, lr = (self.updates[attack_cid][1] / args.batch_size) * args.local_epochs, args.lr
+        elif args.attack == "dlf":
+            # Data Leakage in Federated Averaging https://openreview.net/pdf?id=e7A0B99zJf
+            iterations, lr = 1, args.lr
         else:
             iterations, lr = 1, 1
-        local_grads = self.extract_gradients(self.updates[attack_cid][-1], iterations=iterations, lr=args.lr)
-        # # replace the global model by client model
-        # self.global_model.load_state_dict(self.updates[attack_cid][-1])  # is it necessary ?
+        local_grads = self.extract_gradients(self.updates[attack_cid][-1], iterations=iterations, lr=lr)
 
         if args.attack == "dlg":
             dlg(
@@ -247,6 +251,35 @@ class ServerAttacker(Server):
                 l1=args.l1,
                 fi=args.fi,
                 device=self.device
+            )
+        elif args.attack == "dlf":
+            # restore batch labels
+            label_counts = label_count_restoration(
+                model=self.global_model,
+                o_state=self.global_model.state_dict(),
+                n_state=self.updates[attack_cid][-1],
+                dummy=self.dummy,
+                local_data_size=self.updates[attack_cid][1],
+                epochs=args.local_epochs,
+                batch_size=args.batch_size,
+                device=self.device
+            )
+            dummy_labels = label_count_to_label(label_counts, self.device)
+            dlf(
+                model=self.global_model,
+                gt_grads=local_grads,
+                dummy=self.dummy,
+                labels=dummy_labels,
+                rec_epochs=args.rec_epochs,
+                rec_lr=args.rec_lr,
+                epochs=args.local_epochs,
+                lr=args.lr,
+                data_size=self.updates[attack_cid][1],
+                batch_size=args.batch_size,
+                tv=args.tv,
+                reg_clip=args.reg_clip,
+                reg_reorder=args.reg_reorder,
+                device=args.device
             )
         else:
             raise ValueError("Unexpected {} Attack Type.".format(args.attack))

@@ -23,6 +23,7 @@ def dlf(model, gt_grads, dummy, labels, rec_epochs, rec_lr, epochs, lr, data_siz
     """Attack method proposed in Data Leakage in Federated Averaging
 
     k_batches: number of iterations per epoch
+    Caution: the number of restored data is equal to data_size
 
     :param model: nn.Module
     :param gt_grads: gradients of the ground-truth data
@@ -33,7 +34,7 @@ def dlf(model, gt_grads, dummy, labels, rec_epochs, rec_lr, epochs, lr, data_siz
     :param epochs: training epochs (try to simulate the accumulated gradients)
     :param lr: learning rate
     :param data_size: local data size
-    :param batch_size: batch size
+    :param batch_size: training batch size
     :param tv: hyperparameter for total variation
     :param reg_clip: hyperparameter for clip term
     :param reg_reorder: hyperparameter for Epoch Order-Invariant Prior
@@ -42,6 +43,7 @@ def dlf(model, gt_grads, dummy, labels, rec_epochs, rec_lr, epochs, lr, data_siz
     """
     # no last drop
     k_batches = math.ceil(data_size / batch_size)
+    # avoid possible generation mistake
     dummy_data = torch.randn([data_size, *dummy.image_shape], device=device, requires_grad=True)
 
     criterion = nn.CrossEntropyLoss().to(device)
@@ -151,7 +153,6 @@ def invariant_prior_l2_max(idx1, idx2, inputs):
 
 def get_dummy_grads(model, features, labels, epochs, lr, k_batches, batch_size, criterion):
     data_len = len(features)
-    assert data_len == k_batches * batch_size
 
     # the same method used in inverting gradients
     meta_model = MetaModel(model)

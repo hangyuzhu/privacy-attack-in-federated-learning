@@ -168,8 +168,6 @@ if __name__ == '__main__':
 
     # attack -------------------------------------------------------------------------------------------------
     parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
-    parser.add_argument('--multi_rec', default=False, action='store_true',
-                        help='if using multiple reconstruction from weights')
     parser.add_argument('--imprint', default=False, action='store_true',
                         help='if wrapping the model with imprint block')
     parser.add_argument('--rec_epochs', default=300, type=int, help="reconstruct epochs")
@@ -185,6 +183,10 @@ if __name__ == '__main__':
     parser.add_argument("--l1", type=float, default=0, help="L1 prior")
     parser.add_argument('--fi_lr', default=1e-1, type=float, help='learning rate of feature inversion')
     parser.add_argument("--fi", type=float, default=1, help="feature inversion weight")
+    # dlf
+    parser.add_argument("--reg_clip", type=float, default=10, help="hyperparameter of clipping regularization")
+    parser.add_argument("--reg_reorder", type=float, default=6.075,
+                        help="hyperparameter for Epoch Order-Invariant Prior")
 
     args = parser.parse_args()
     print('\n============== Experimental Settings ==============')

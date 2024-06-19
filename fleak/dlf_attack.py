@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from fleak.attack import dlf
-from fleak.attack import label_count_restoration
+from fleak.attack.label import label_count_restoration
 from fleak.attack.label import label_count_to_label
 from fleak.utils.options import get_dataset_options
 from fleak.utils.options import get_model_options
@@ -55,12 +55,13 @@ def dlf_attack(args):
 
     # attack hyperparameters
     args.num_exp = 1
-    args.epochs = 10
-    args.rec_epochs = 200
-
+    rec_epochs = 200
+    rec_lr = 0.1
     local_lr = 0.004
-    args.rec_lr = 0.1
+    epochs = 10
 
+    # equivalent to the official implementation
+    # set True for label restoration
     restore_label = False
     data_size = 50
     # bs 10 or 1
@@ -113,18 +114,20 @@ def dlf_attack(args):
             model=model,
             features=gt_x,
             labels=gt_y,
-            epochs=args.epochs,
+            epochs=epochs,
             data_size=data_size,
             batch_size=args.rec_batch_size,
             rand_batch=rand_batch,
             optimizer=train_optimizer,
             criterion=criterion
         )
+        # reset to the original state
+        model.load_state_dict(o_state)
 
         # ======= Reconstruct label counts =======
         if restore_label:
             label_counts = label_count_restoration(
-                model, o_state, n_state, dummy, data_size, args.epochs, args.rec_batch_size, args.device)
+                model, o_state, n_state, dummy, data_size, epochs, args.rec_batch_size, args.device)
 
             gt_counts = torch.tensor([torch.sum(gt_y == i) for i in range(N_CLASSES[args.dataset])], device=args.device)
             tar_err = torch.sum(torch.abs(gt_counts - label_counts)) / 2
@@ -135,7 +138,7 @@ def dlf_attack(args):
             targets = gt_y
 
         # ======= Private Attack =======
-        dlf(model, gt_grads, dummy, targets, args.rec_epochs, args.rec_lr, args.epochs, local_lr,
+        dlf(model, gt_grads, dummy, targets, rec_epochs, rec_lr, epochs, local_lr,
             data_size, args.rec_batch_size, tv, reg_clip, reg_reorder, args.device)
 
     # save

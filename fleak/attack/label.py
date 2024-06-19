@@ -68,6 +68,8 @@ def label_count_restoration(model,
     O_start, p_start = calc_label_stats(model, dummy, device)
     model.load_state_dict(n_state)
     O_end, p_end = calc_label_stats(model, dummy, device)
+    # reset to the original state
+    model.load_state_dict(o_state)
 
     coefs = torch.arange(0, 1, 1 / (k_batches * batch_size)).to(device)
     O_s = (1 - coefs) * O_start + coefs * O_end
