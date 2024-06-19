@@ -61,6 +61,7 @@ class TorchDummy:
         self.labels = []
 
     def generate_dummy_input(self, device=None):
+        """ Generate dummy data with shape (bs, ...) """
         if device is None:
             device = self.device
         return torch.randn(self.input_shape, device=device, requires_grad=True)

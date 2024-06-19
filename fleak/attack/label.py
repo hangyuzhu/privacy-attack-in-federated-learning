@@ -1,3 +1,4 @@
+import math
 from collections import OrderedDict
 
 import torch
@@ -8,7 +9,7 @@ def one_shot_batch_label_restoration(model, gt_grads, dummy_data):
 
     Towards General Deep Leakage in Federated Learning https://arxiv.org/pdf/2110.09074
     This may cause computation error since p_kn is not the prediction of the real data
-    Caution: the total label counts may not be equal to the length of the real data
+    Caution: the total label counts may not be equal to the data size
 
     :param model: nn.Module
     :param gt_grads: gradients of the ground-truth data
@@ -39,7 +40,6 @@ def label_count_restoration(model,
                             dummy,
                             local_data_size,
                             epochs,
-                            k_batches,
                             batch_size,
                             device):
     """Label count restoration implemented in https://github.com/eth-sri/fedavg_leakage
@@ -52,18 +52,19 @@ def label_count_restoration(model,
     :param dummy: TorchDummy
     :param local_data_size: local data size K
     :param epochs: local training epochs
-    :param k_batches: number of batches per epoch
     :param batch_size: batch size
     :param device: cpu or cuda
     :return: label counts where each slot represents possible occurrences of each class
     """
     K = local_data_size
+    k_batches = math.ceil(K / batch_size)
+
     o_params = [o_state[k] for k, _ in model.named_parameters()]
     # for PyTorch implementation, the size of model weights is (out_dim, in_dim)
     # sum across the input dimension of the last layer weights
     dW = torch.sum(o_params[-2], dim=-1)
 
-    model.load_state_dict(o_state)
+    model.load_state_dict(o_state)   # p._copy(params)
     O_start, p_start = calc_label_stats(model, dummy, device)
     model.load_state_dict(n_state)
     O_end, p_end = calc_label_stats(model, dummy, device)
@@ -85,10 +86,11 @@ def label_count_restoration(model,
 def calc_label_stats(model, dummy, device):
     k_bs = 1
     k_in = torch.randn([k_bs, *dummy.image_shape], device=device)
-    p_k, O_km = model(k_in, return_z=True)
-    p_k = torch.mean(torch.softmax(p_k, dim=-1))
-    O_k = torch.mean(torch.sum(O_km, dim=-1))
-    return O_k, p_k
+    p_kn, O_km = model(k_in, return_z=True)
+    # average across k dimension
+    p = torch.mean(torch.softmax(p_kn, dim=-1))
+    O_hat = torch.mean(torch.sum(O_km, dim=-1))
+    return O_hat, p
 
 
 def round_label_counts(counts, K):

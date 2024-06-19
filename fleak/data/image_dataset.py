@@ -146,6 +146,29 @@ class DatasetSplit(Dataset):
         return image, label
 
 
+class ImageDataset(Dataset):
+
+    def __init__(self, data, targets, transform=None, target_transform=None):
+        self.data = data
+        self.targets = targets
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index: int):
+        img, target = self.data[index], self.targets[index]
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target
+
+
 class ImageFolderDataset(Dataset):
 
     def __init__(self, samples, loader=default_loader, transform=None, target_transform=None):

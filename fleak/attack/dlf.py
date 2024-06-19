@@ -1,6 +1,7 @@
-"""Deep Leakage in Federated Averaging
+"""Deep Leakage in Federated Averaging https://openreview.net/pdf?id=e7A0B99zJf
 
-https://openreview.net/pdf?id=e7A0B99zJf
+The most significant idea for this method is to simulate the dummy gradients
+by multiple iteration steps. Thus, the precision of label inference is the key point
 
 """
 import copy
@@ -17,17 +18,41 @@ from .ig import total_variation
 from ..model import MetaModel
 
 
-def dlf(model, gt_grads, dummy, labels, rec_epochs, rec_lr, epochs, lr, k_batches, batch_size, tv, reg_clip, reg_reorder, device):
-    # dummy data with size = k_batches * batch_size
-    dummy_data = dummy.generate_dummy_input(device)
-    criterion = nn.CrossEntropyLoss().to(device)
+def dlf(model, gt_grads, dummy, labels, rec_epochs, rec_lr, epochs, lr, data_size, batch_size,
+        tv, reg_clip, reg_reorder, device):
+    """Attack method proposed in Data Leakage in Federated Averaging
 
+    k_batches: number of iterations per epoch
+
+    :param model: nn.Module
+    :param gt_grads: gradients of the ground-truth data
+    :param dummy: TorchDummy object
+    :param labels: restored / real labels
+    :param rec_epochs: reconstruction epochs (doubled)
+    :param rec_lr: reconstruction learning rate
+    :param epochs: training epochs (try to simulate the accumulated gradients)
+    :param lr: learning rate
+    :param data_size: local data size
+    :param batch_size: batch size
+    :param tv: hyperparameter for total variation
+    :param reg_clip: hyperparameter for clip term
+    :param reg_reorder: hyperparameter for Epoch Order-Invariant Prior
+    :param device: cpu or cuda
+    :return: restored dummy data
+    """
+    # no last drop
+    k_batches = math.ceil(data_size / batch_size)
+    dummy_data = torch.randn([data_size, *dummy.image_shape], device=device, requires_grad=True)
+
+    criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.Adam([dummy_data], lr=rec_lr)
+    # follow the original implementation
     start = 4
-    alpha = math.exp(1.0 / rec_epochs * math.log(2 / start))
     minmax = 2
+    alpha = math.exp(1.0 / rec_epochs * math.log(minmax / start))
     reorder_prior = "l2_max_conv"
 
+    # layer summation tricks
     layer_weights = torch.arange(len(gt_grads), 0, -1)
     layer_weights = torch.exp(layer_weights)
     layer_weights = layer_weights / torch.sum(layer_weights)
@@ -56,8 +81,11 @@ def dlf(model, gt_grads, dummy, labels, rec_epochs, rec_lr, epochs, lr, k_batche
         for dummy_g, gt_g, lw in zip(dummy_grads, gt_grads, layer_weights):
             grad_diff += lw * ((dummy_g - gt_g) ** 2).sum()
         grad_diff /= k_batches
-
-        tot_loss = curr_fac * grad_diff + tv * total_variation(dummy_data) + reg_clip * clip_prior(dummy_data, -dummy.t_dm / dummy.t_ds, 1 / dummy.t_ds) + reg_reorder * inv_prior
+        # l2_loss + tv_loss + clip_loss + prior_loss
+        tot_loss = curr_fac * grad_diff \
+                   + tv * total_variation(dummy_data) \
+                   + reg_clip * clip_prior(dummy_data, -dummy.t_dm / dummy.t_ds, 1 / dummy.t_ds) \
+                   + reg_reorder * inv_prior
         tot_loss.backward()
         optimizer.step()
         pbar.set_description("Loss {:.6}".format(tot_loss))
@@ -68,12 +96,16 @@ def dlf(model, gt_grads, dummy, labels, rec_epochs, rec_lr, epochs, lr, k_batche
 
 
 def clip_prior(x, inv_mean, inv_std):
-    x_unorm = (x - inv_mean)/ inv_std
+    x_unorm = (x - inv_mean) / inv_std
     dist_clip = torch.sum(torch.mean(torch.square(x_unorm - torch.clamp(x_unorm, 0.0, 1.0)), dim=0))
     return dist_clip
 
 
 def order_invariant_prior(inputs, reorder_prior, epochs, device):
+    """
+        Enforce the property that all the reconstruction variables corresponding to
+        the same input at different epochs hold similar values.
+    """
     epoch_size = len(inputs) // epochs
 
     x = torch.arange(epochs)
