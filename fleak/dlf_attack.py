@@ -60,9 +60,9 @@ def dlf_attack(args):
     local_lr = 0.004
     epochs = 10
 
-    # equivalent to the official implementation
+    # set False for the official implementation
     # set True for label restoration
-    restore_label = False
+    restore_label = True
     data_size = 50
     # bs 10 or 1
     args.rec_batch_size = 10
@@ -127,7 +127,7 @@ def dlf_attack(args):
         # ======= Reconstruct label counts =======
         if restore_label:
             label_counts = label_count_restoration(
-                model, o_state, n_state, dummy, data_size, epochs, args.rec_batch_size, args.device)
+                model, o_state, n_state, gt_grads, dummy, data_size, epochs, args.rec_batch_size, args.device)
 
             gt_counts = torch.tensor([torch.sum(gt_y == i) for i in range(N_CLASSES[args.dataset])], device=args.device)
             tar_err = torch.sum(torch.abs(gt_counts - label_counts)) / 2

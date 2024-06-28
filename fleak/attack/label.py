@@ -37,6 +37,7 @@ def one_shot_batch_label_restoration(model, gt_grads, dummy_data):
 def label_count_restoration(model,
                             o_state: OrderedDict,
                             n_state: OrderedDict,
+                            deltaW,
                             dummy,
                             local_data_size,
                             epochs,
@@ -49,6 +50,7 @@ def label_count_restoration(model,
     :param model: nn.Module
     :param o_state: original state dict of the model
     :param n_state: updated state dict of the model
+    :param deltaW: (o_state - n_state) / lr
     :param dummy: TorchDummy
     :param local_data_size: local data size K
     :param epochs: local training epochs
@@ -59,10 +61,9 @@ def label_count_restoration(model,
     K = local_data_size
     k_batches = math.ceil(K / batch_size)
 
-    o_params = [o_state[k] for k, _ in model.named_parameters()]
     # for PyTorch implementation, the size of model weights is (out_dim, in_dim)
     # sum across the input dimension of the last layer weights
-    dW = torch.sum(o_params[-2], dim=-1)
+    dW = torch.sum(deltaW[-2], dim=-1)
 
     model.load_state_dict(o_state)   # p._copy(params)
     O_start, p_start = calc_label_stats(model, dummy, device)

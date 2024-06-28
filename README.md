@@ -236,6 +236,6 @@ Just run the following command for gradient attack:
 cd ./experiment/grad
 sh dlf.sh
 ```
-Note that, this is the result using real labels for image restoration. If you want to restore
-images with inferred labels, just set restore_label = True in file fleak/dlf_attack.py
+Note that, the official implementation adopts the real labels for image restoration. And you can just set 
+restore_label = False in file fleak/dlf_attack.py for better quality of reconstructed images
 ![Gradient Attack](images/dlf_1n_nzcifar100_cnn3_10rb.png)

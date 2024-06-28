@@ -258,6 +258,7 @@ class ServerAttacker(Server):
                 model=self.global_model,
                 o_state=self.global_model.state_dict(),
                 n_state=self.updates[attack_cid][-1],
+                deltaW=local_grads,
                 dummy=self.dummy,
                 local_data_size=self.updates[attack_cid][1],
                 epochs=args.local_epochs,
