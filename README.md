@@ -240,3 +240,9 @@ Note that, the official implementation adopts the real labels for image restorat
 restore_label = False in file fleak/dlf_attack.py for better quality of reconstructed images
 ![Gradient Attack](images/dlf_1n_nzcifar100_cnn3_10rb.png)
 
+And run the following command for federated attack:
+```sh
+cd ./experiment/fed
+sh dlf.sh
+```
+Note that, adopting too large learning rate (e.g. 0.1) would cause unexpected running bugs for label restoration !
