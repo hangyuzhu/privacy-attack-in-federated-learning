@@ -3,7 +3,7 @@ BASE_DATADIR="../federated_learning/data"
 cd ..
 cd ..
 
-# run dlg
+# run dlf
 # non-iid
 python server_attack.py \
     --attack dlf \
@@ -13,11 +13,11 @@ python server_attack.py \
     --normalize \
     --p_type dirichlet \
     --beta 0.5 \
-    --total_clients 10 \
-    --num_rounds 10 \
-    --local_epochs 1 \
+    --total_clients 50 \
+    --num_rounds 1 \
+    --local_epochs 2 \
     --batch_size 50 \
-    --lr 0.1 \
+    --lr 0.004 \
     --lr_decay 0.95 \
     --client_momentum 0 \
     --rec_epochs 200 \
