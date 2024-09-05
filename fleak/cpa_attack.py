@@ -95,8 +95,12 @@ def cpa_fi(args):
 
     # attack hyperparameters
     args.pretrained = True
+
     # pretrained vgg16 model provided by PyTorch
+    # you can download pretrained model from https://www.flyai.com/m/vgg16-397923af.pth
+    # and save it within the created folder saved_models
     model_file = "saved_models/vgg16-397923af.pth"
+
     args.num_exp = 1
     args.rec_batch_size = 30
     rec_epochs = 25000
