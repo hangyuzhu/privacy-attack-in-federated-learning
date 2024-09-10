@@ -69,7 +69,7 @@ is the scaled image and $x$ is the original image.
 Normalize: data normalization is sensitive to the quality of dummy images in GRNN. The process of normalization is
 shown below:
 ```math
-x_{\text{norm}}=\frac{x_{\text{scaled}}-x_{\mu}}{x_{\text{std}}}
+$$x_{\text{norm}}=\frac{x_{\text{scaled}}-x_{\mu}}{x_{\text{std}}}$$
 ```
 where $x_{\mu}$ and $x_{\text{std}}$ are mean and standard deviation of the scaled data $x_{\text{scaled}}$, respectively.
 According to our experimental results, setting 0.5 for both $x_{\mu}$ and $x_{\text{std}}$ may enhance the quality
