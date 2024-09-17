@@ -266,6 +266,7 @@ class ServerAttacker(Server):
                 device=self.device
             )
             dummy_labels = label_count_to_label(label_counts, self.device)
+            assert args.batch_size == args.rec_batch_size
             dlf(
                 model=self.global_model,
                 gt_grads=local_grads,

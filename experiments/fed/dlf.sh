@@ -21,6 +21,7 @@ python server_attack.py \
     --lr_decay 0.95 \
     --client_momentum 0 \
     --rec_epochs 200 \
+    --rec_batch_size 10 \
     --rec_lr 0.1 \
     --tv 0.0002 \
     --reg_clip 10 \
