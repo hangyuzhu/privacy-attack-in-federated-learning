@@ -1,11 +1,13 @@
 import time
+from functools import partial
 
 from fleak.server import Server
 from fleak.client import Client
 from fleak.utils.options import get_model_options
 from fleak.utils.constants import DATASETS, MODELS, MODE, STRATEGY
-from fleak.data.image_dataset import N_CLASSES
+from fleak.data.image_dataset import N_CLASSES, IMAGE_SHAPE
 from fleak.data.dataloader import federated_dataloaders
+from fleak.model import ImprintModel
 from fleak.utils.save import save_acc
 
 
@@ -31,6 +33,10 @@ def main(args):
 
     # ======= Create Model ========
     model = get_model_options(args.dataset)[args.model]
+    # adding imprint block
+    if args.imprint:
+        model = partial(ImprintModel, base_module=model, input_shape=[1, *IMAGE_SHAPE[args.dataset]])
+        print("\n###### Wrap the model by imprint module ######")
 
     # ======= Create Server ========
     server = Server(global_model=model(N_CLASSES[args.dataset]),

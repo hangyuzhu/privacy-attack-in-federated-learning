@@ -1,5 +1,6 @@
 import os
 import time
+import torch
 from functools import partial
 
 from fleak.server import ServerAttacker
@@ -58,13 +59,12 @@ def main(args):
 
     # ======= Create Attacker ========
     if args.attack == "ggl":
-        import torch
         generator = GGLGenerator()
-        model_file = os.path.join("saved_models", "ggl_" + args.dataset + ".pth")
-        try:
+        if args.ggl_pretrained:
+            model_file = os.path.join("saved_models", "ggl_" + args.dataset + ".pth")
             generator.load_state_dict(torch.load(model_file))
             print("\n###### Pretrained GGL generator has been loaded ######")
-        except:
+        else:
             print("\n###### Untrained GGL generator is employed ######")
     else:
         generator = None
@@ -170,6 +170,9 @@ if __name__ == '__main__':
     parser.add_argument('--attack', default='dlg', type=str, choices=ATTACKS, help='the attack type')
     parser.add_argument('--imprint', default=False, action='store_true',
                         help='if wrapping the model with imprint block')
+    parser.add_argument('--ggl_pretrained', default=False, action='store_true',
+                        help='if using pretrained parameters for GGL generator')
+
     parser.add_argument('--rec_epochs', default=300, type=int, help="reconstruct epochs")
     parser.add_argument('--rec_batch_size', default=1, type=int, metavar='N', help='reconstruction batch size.')
     parser.add_argument('--rec_lr', default=1.0, type=float, help='reconstruct learning rate')

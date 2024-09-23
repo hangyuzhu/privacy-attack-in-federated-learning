@@ -11,6 +11,7 @@ python server_attack.py \
     --base_data_dir $BASE_DATADIR \
     --dataset cifar10 \
     --normalize \
+    --ggl_pretrained \
     --p_type dirichlet \
     --beta 0.5 \
     --total_clients 10 \
