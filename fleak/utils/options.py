@@ -6,7 +6,8 @@ from ..model import CifarConvNetNoDropout
 from ..model import DLFConvNet3
 from ..model import ResNet18
 from ..model import ResNet34
-from ..model import FC2
+from ..model import CifarFC2
+from ..model import TinyFC2
 from ..model import CpaVGG16
 from ..model import TinyImageNetVGG
 
@@ -30,7 +31,7 @@ def get_model_options(dataset):
         "cnn": MnistConvNetNoDropout if dataset == 'mnist' else CifarConvNetNoDropout,
         "resnet18": ResNet18,
         "resnet34": ResNet34,
-        "fc2": FC2,
+        "fc2": TinyFC2 if dataset == 'tiny_imagenet' else CifarFC2,
         "vgg16": CpaVGG16 if dataset == 'imagenet' else TinyImageNetVGG,
         "cnn3": DLFConvNet3
     }

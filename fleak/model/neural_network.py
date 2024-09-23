@@ -311,7 +311,32 @@ class CifarMLP(nn.Module):
         return x
 
 
-class FC2(nn.Module):
+class CifarFC2(nn.Module):
+
+    def __init__(self, num_classes, x_dim=math.prod(IMAGE_SHAPE["cifar10"]), h_dim=256):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        # linear 1
+        self.fc1 = nn.Linear(x_dim, h_dim)
+        self.relu1 = nn.ReLU()
+        # linear 2
+        self.fc2 = nn.Linear(h_dim, num_classes)
+
+        # used for cpa attack
+        self.attack_index = 0
+        self.model_type = "cpa_fc2"
+
+    def forward(self, x, return_z=False):
+        x = self.flatten(x)
+        z = self.relu1(self.fc1(x))
+        x = self.fc2(z)
+        if return_z:
+            return x, z
+        else:
+            return x
+
+
+class TinyFC2(nn.Module):
     """
 
     Linear model adopted in CPA
@@ -573,7 +598,18 @@ class ResNet(nn.Module):
 
 
 def ResNet18(num_classes):
-    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes)
+    if num_classes == 10:
+        return ResNet(BasicBlock, [2, 2, 2, 2], num_classes)
+    elif num_classes == 200:
+        from torchvision import models
+        model = models.resnet18()
+        # Finetune Final few layers to adjust for tiny imagenet input
+        model.avgpool = nn.AdaptiveAvgPool2d(1)
+        num_features = model.fc.in_features
+        model.fc = nn.Linear(num_features, num_classes)
+        return model
+    else:
+        raise ValueError(f"{num_classes} output classes are unexpected.")
 
 
 def ResNet34(num_classes):
