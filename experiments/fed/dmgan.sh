@@ -12,7 +12,7 @@ python client_attack.py \
     --p_type dirichlet \
     --beta 0.5 \
     --total_clients 10 \
-    --num_rounds 50 \
+    --num_rounds 30 \
     --local_epochs 2 \
     --batch_size 50 \
     --lr 0.1 \

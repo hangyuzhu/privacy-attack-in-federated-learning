@@ -1,4 +1,4 @@
-# Federated Privacy Attack
+# Privacy Attack in Federated Learning is Not Easy
 
 This repository includes more than 8 privacy attack algorithms employed in federated learning. We follow the official implementations
 released by the authors of the original paper, and remove redundant parts to make them as simple as possible.
