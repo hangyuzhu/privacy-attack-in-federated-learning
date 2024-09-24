@@ -14,10 +14,10 @@ python server_attack.py \
     --ggl_pretrained \
     --p_type dirichlet \
     --beta 0.5 \
-    --total_clients 10 \
+    --total_clients 100 \
     --num_rounds 30 \
     --local_epochs 1 \
-    --batch_size 50 \
+    --batch_size 10 \
     --lr 0.1 \
     --lr_decay 0.95 \
     --client_momentum 0 \
