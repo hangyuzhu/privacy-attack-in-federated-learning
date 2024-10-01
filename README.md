@@ -14,7 +14,6 @@ of model parameters of the second fully connected layer in Imprint module is *to
 ConvNet may cause severe gradient explosion phenomenon to break down the whole process (result in nan stuff).
 
 ## Reference
-[arxiv](https://arxiv.org/abs/2409.19301)
 @misc{zhu2024privacyattackfederatedlearning,
       title={Privacy Attack in Federated Learning is Not Easy: An Experimental Study}, 
       author={Hangyu Zhu and Liyuan Huang and Zhenping Xie},
