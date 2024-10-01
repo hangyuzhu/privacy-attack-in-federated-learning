@@ -13,17 +13,6 @@ performance of federated learning which is unrealistic in the real world applica
 of model parameters of the second fully connected layer in Imprint module is *too large*, utilizing training model like
 ConvNet may cause severe gradient explosion phenomenon to break down the whole process (result in nan stuff).
 
-## Reference
-@misc{zhu2024privacyattackfederatedlearning,
-      title={Privacy Attack in Federated Learning is Not Easy: An Experimental Study}, 
-      author={Hangyu Zhu and Liyuan Huang and Zhenping Xie},
-      year={2024},
-      eprint={2409.19301},
-      archivePrefix={arXiv},
-      primaryClass={cs.CR},
-      url={https://arxiv.org/abs/2409.19301}, 
-}
-
 ## Quick Start
 
 ### Gradient Attack
