@@ -106,9 +106,6 @@ if __name__ == '__main__':
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
     parser.add_argument('--lr_decay', default=0.95, type=float, help='learning rate decay')
 
-    # for fedper
-    parser.add_argument('--num_shared_layers', default=-1, type=int, help='number of shared layers for fedper')
-
     parser.add_argument('--client_momentum', default=0.5, type=float, help='learning momentum on client')
     parser.add_argument('--model', default='cnn', type=str, choices=MODELS, help='Training model')
     parser.add_argument('--imprint', default=False, action='store_true',
