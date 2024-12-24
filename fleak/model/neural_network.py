@@ -303,12 +303,15 @@ class CifarMLP(nn.Module):
         # linear3
         self.fc3 = nn.Linear(200, num_classes)
 
-    def forward(self, x):
+    def forward(self, x, return_z=False):
         x = self.flatten(x)
         x = self.relu1(self.fc1(x))
-        x = self.relu2(self.fc2(x))
-        x = self.fc3(x)
-        return x
+        z = self.relu2(self.fc2(x))
+        x = self.fc3(z)
+        if return_z:
+            return x, z
+        else:
+            return x
 
 
 class CifarFC2(nn.Module):
